@@ -18,29 +18,35 @@
 
 ![Group Fourier transform and fused p4 computation](figs/method.png)
 
-**⚡ Acceleration Principle: ** by applying the DFT convolution theorem along the group dimension, group-circulant convolution (requiring `NDC` MACs) transforms into elementwise multiplication in the Fourier domain (reducing to `NDC/T` MACs):
-$$
-\boxed{\;\;
-\mathcal{F}_{\mathcal{G}}
-	\left(
-	{\mathbf X} \circledast_{\mathcal{G}} \tilde{\mathbf W}
-	\right)
-	=
-	\mathcal{F}_{\mathcal{G}}({\mathbf X})
-	\odot_{\mathcal{G}}
-	\mathcal{F}_{\mathcal{G}}(\tilde{\mathbf W})
-	\;\; \Longrightarrow \;\;
-	{\mathbf X} \circledast_{\mathcal{G}} \tilde{\mathbf W}
-	=
-	\mathcal{F}_{\mathcal{G}}^{-1}
-	\left(
-	\mathcal{F}_{\mathcal{G}}({\mathbf X})
-	\odot_{\mathcal{G}}
-	\mathcal{F}_{\mathcal{G}}(\tilde{\mathbf W})
-	\right)
-	\;\;}
-$$
-Since input features `X` and weights `W` are real-valued, their Fourier coefficients satisfy $F(X)_{T-k} = conj(F(X)_k)$. We exploit this symmetry to compute only half of the frequency components, further reducing computation by **~2×**.
+**⚡ Acceleration Principle:** By applying the DFT convolution theorem along the group dimension, group-circulant convolution (requiring `NDC` MACs) transforms into elementwise multiplication in the Fourier domain (reducing to `NDC/T` MACs):
+
+```math
+\boxed{
+\begin{aligned}
+\mathcal{F}_{\mathcal{G}}\!\left(
+  \mathbf{X} \circledast_{\mathcal{G}} \tilde{\mathbf{W}}
+\right)
+&= \mathcal{F}_{\mathcal{G}}(\mathbf{X})
+   \odot_{\mathcal{G}}
+   \mathcal{F}_{\mathcal{G}}(\tilde{\mathbf{W}})
+\\[6pt]
+\mathbf{X} \circledast_{\mathcal{G}} \tilde{\mathbf{W}}
+&= \mathcal{F}_{\mathcal{G}}^{-1}\!\left(
+   \mathcal{F}_{\mathcal{G}}(\mathbf{X})
+   \odot_{\mathcal{G}}
+   \mathcal{F}_{\mathcal{G}}(\tilde{\mathbf{W}})
+\right)
+\end{aligned}
+}
+```
+
+Since input features `X` and weights `W` are real-valued, their Fourier coefficients satisfy $`F(X)_{T-k} = \overline{F(X)_k}`$. We exploit this symmetry to compute only half of the frequency components, further reducing computation by **~2×**.
+
+
+
+
+
+
 
 
 
