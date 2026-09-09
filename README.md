@@ -20,27 +20,9 @@
 
 **⚡ Acceleration Principle:** By applying the DFT convolution theorem along the group dimension, group-circulant convolution (requiring `NDC` MACs) transforms into elementwise multiplication in the Fourier domain (reducing to `NDC/T` MACs):
 
-```math
-\boxed{
-\begin{aligned}
-\mathcal{F}_{\mathcal{G}}\!\left(
-  \mathbf{X} \circledast_{\mathcal{G}} \tilde{\mathbf{W}}
-\right)
-&= \mathcal{F}_{\mathcal{G}}(\mathbf{X})
-   \odot_{\mathcal{G}}
-   \mathcal{F}_{\mathcal{G}}(\tilde{\mathbf{W}})
-\\[6pt]
-\mathbf{X} \circledast_{\mathcal{G}} \tilde{\mathbf{W}}
-&= \mathcal{F}_{\mathcal{G}}^{-1}\!\left(
-   \mathcal{F}_{\mathcal{G}}(\mathbf{X})
-   \odot_{\mathcal{G}}
-   \mathcal{F}_{\mathcal{G}}(\tilde{\mathbf{W}})
-\right)
-\end{aligned}
-}
-```
+![image-20260909222332656](./figs\DFT_convolution.png)
 
-Since input features `X` and weights `W` are real-valued, their Fourier coefficients satisfy $`F(X)_{T-k} = \overline{F(X)_k}`$. We exploit this symmetry to compute only half of the frequency components, further reducing computation by **~2×**.
+Since input features `X` and weights `W` are real-valued, their Fourier coefficients satisfy $F(X)_{T-k} = \overline{F(X)_k}$. We exploit this symmetry to compute only half of the frequency components, further reducing computation by **~2×**.
 
 
 
