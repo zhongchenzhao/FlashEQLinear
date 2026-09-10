@@ -20,11 +20,11 @@ Most importantly, the acceleration is mathematically **lossless** — maintainin
 
 ![Group Fourier transform and fused p4 computation](figs/method.png)
 
-**⚡ Acceleration Principle:** By applying the DFT convolution theorem along the group dimension, group-circulant convolution (requiring `NDC` MACs) transforms into elementwise multiplication in the Fourier domain (reducing to `NDC/T` MACs):
+**⚡ Acceleration Principle:** By applying the **DFT convolution theorem** along the group dimension, group-circulant convolution (requiring `NDC` MACs) transforms into elementwise multiplication in the Fourier domain (reducing to `NDC/T` MACs):
 
 ![image-20260909222332656](figs/DFT_convolution.png)
 
-Since input features `X` and weights `W` are real-valued, their Fourier coefficients satisfy $F(X)_{T-k} = \overline{F(X)_k}$. We exploit this symmetry to compute only half of the frequency components, further reducing computation by **~2×**.
+Since input features `X` and weights `W` are real-valued, their Fourier coefficients satisfy **conjugate symmetry of real DFT**: $F(X)_{T-k} = \overline{F(X)_k}$. We exploit this symmetry to compute only half of the frequency components, further reducing computation by **~2×**.
 
 
 
