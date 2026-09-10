@@ -7,6 +7,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2607.21271-b31b1b.svg)](https://arxiv.org/abs/2607.21271) ![Lossless](https://img.shields.io/badge/Acceleration-Lossless-brightgreen.svg)
 
 
+
 ## 💡 Introduction
 
 **🎯 TL;DR:** Flash EQ-Linear accelerates rotation-equivariant linear layers by applying the Fourier transform along the group dimension. For the **p4 group (90-degree rotations)**, it achieves a theoretical speedup of **2.67×**, delivering measured speedups of up to **2.1× for operator-level forward passes** and **1.7× for end-to-end network inference**. 
