@@ -1,13 +1,14 @@
 # Flash EQ-Linear demos
 
-Open `index.html` in a browser for all four demos, or visit this repository's GitHub Pages site. Each page is a single self-contained HTML file (no CDN, no network access) with an English/中文 switch and light/dark themes.
+Open `index.html` in a browser for all the demos, or visit this repository's GitHub Pages site. Each page is a single self-contained HTML file (no CDN, no network access) with an English/中文 switch and light/dark themes.
 
 | Demo | Files | What it shows | Data |
 |---|---|---|---|
 | S1 · Throughput race | `s1_throughput_race.html` | Standard, naive and Flash versions of a network race through the same workload. A chart compares the speedup of every network. | Paper Tables 3 and 4 (replayed, not measured in the browser) |
 | S2 · How it works | `s2_principle.html` | Five-step animation: circulant layer → DFT along the group axis → one product per frequency → conjugate symmetry → inverse DFT, with a group-size selector T ∈ {2, 4, 8, 16}. | Exact arithmetic on random numbers, computed in the page |
-| R1 · Live terminal race | `r1_terminal_race/` | Naive EQ-ViT-H and Flash EQ-ViT-H run at the same time on two RTX 4090s (FP32, batch 128, 3,200 images): Flash finishes **1.69×** sooner (paper Table 3: 1.67×). | Real run |
-| R2 · Super-resolution race | `r2_sr_race/` | Naive and Flash EQ-SwinIR-LIIF upscale one image ×2 as 294 patches of 48 × 48 (batch 1, FP32): Flash is **1.24×** faster (paper Table 4: 1.26×). Patches turn sharp when they finish. | Real per-patch timings; the picture is the reference HR image |
+| R1 · Live terminal race | `r1_terminal_race/` | Standard ViT-H, naive EQ-ViT-H and Flash EQ-ViT-H run at the same time on three RTX 4090s (FP32, batch 128, 3,200 images). Flash finishes **1.69×** sooner than ViT-H; naive EQ-ViT-H matches ViT-H (1.01×) with 4× fewer parameters. | Real run |
+| R2 · Super-resolution race | `r2_sr_race/` | SwinIR-LIIF, naive EQ-SwinIR-LIIF and Flash EQ-SwinIR-LIIF upscale one image ×2 as 294 patches of 48 × 48, 16 per batch (FP32). Flash is **1.25×** faster than SwinIR-LIIF and 1.29× faster than naive EQ; naive EQ runs at 0.97× the speed of SwinIR-LIIF with 3.9× fewer parameters. | Real timings; the picture is the reference HR image |
+| R3 · Super-resolution quality | `r3_sr_quality/` | Trained MambaIR and EQ-MambaIR on Urban100 img039 (×2), with a zoom box on the striped facade: EQ-MambaIR gains **+0.64 dB** on the whole image and **+6.4 dB** inside the box. Flash EQ-Linear computes the same layers, so it gives the same image. | Real outputs of trained models |
 
 To serve the folder locally (so the videos play in every browser):
 
@@ -24,9 +25,10 @@ python -m http.server 8000 --directory demo
 
 ## Notes
 
-- In R2 the networks use random weights, so the video shows the reference high-resolution image; only the timings are measured.
-- R2 was recorded on a server whose CPU limits kernel launches at batch 1, so both networks run slower than in Table 4 (22.5 and 27.9 patches/s instead of 105 and 132). The speedup ratio matches the paper.
-- R2 image: DIV2K validation image 0821 (DIV2K is distributed for academic research).
+- R1 and R2 use random weights: they measure speed, not accuracy. R2 therefore shows the reference high-resolution image and plays 4× slower than real time; both are stated on screen.
+- R2 processes patches in batches of 16. With one patch at a time, the recording server's CPU limits how fast kernels are launched, which hides the arithmetic savings: at batch 1 SwinIR-LIIF runs at 38.7 patches/s, naive EQ at 22.4 and Flash EQ at 27.7. From batch 16 up, naive EQ matches SwinIR-LIIF and Flash EQ is about 1.24× faster than both.
+- R3 compares outputs of trained MambaIR and EQ-MambaIR models (×2, the same configuration). Y-PSNR is measured against the ground truth with a 2-pixel border crop. The equivariant layers of EQ-MambaIR were replaced with Flash EQ-Linear and checked against the naive layers in FP32: the largest output difference was 9e-6.
+- Images: DIV2K validation image 0821 (R2) and Urban100 img039 (R3). Both datasets are distributed for academic research.
 
 ## Hosting
 
@@ -41,5 +43,6 @@ python -m http.server 8000 --directory demo
 - 打开 `index.html` 即可浏览全部演示；页面右上角可切换中文/English 和深浅配色。
 - **S1 吞吐量竞速**：回放论文表 3、表 4 的实测吞吐量，并给出各网络的加速比图。
 - **S2 加速原理**：五步动画（循环矩阵 → 群维 DFT → 逐频率乘积 → 共轭对称 → 逆 DFT），可切换 T = 2/4/8/16；`?step=3` 可直接打开第 3 步，方便放进幻灯片。
-- **R1 终端实时竞速**：两块 RTX 4090 同时跑朴素 / Flash EQ-ViT-H（FP32，batch 128，3,200 张图），实测快 1.69×（论文 1.67×）。
-- **R2 超分竞速**：EQ-SwinIR-LIIF 逐块 ×2 超分（48 × 48 图块，batch 1），实测快 1.24×（论文 1.26×）。画面为参考高清图（模型为随机权重），计时为真实实测。录制服务器在 batch 1 时受 CPU 发射速度限制，绝对用时比论文长，但加速比一致。
+- **R1 终端实时竞速**：三块 RTX 4090 同时跑标准 ViT-H、朴素 EQ-ViT-H 和 Flash EQ-ViT-H（FP32，batch 128，3,200 张图）。Flash 比 ViT-H 快 1.69×；朴素 EQ-ViT-H 与 ViT-H 速度相当（1.01×），参数少 4 倍。
+- **R2 超分竞速**：SwinIR-LIIF、朴素 EQ-SwinIR-LIIF 和 Flash EQ-SwinIR-LIIF 逐块 ×2 超分（48 × 48 图块，每批 16 块）。Flash 比 SwinIR-LIIF 快 1.25×，比朴素 EQ 快 1.29×。画面为参考高清图（模型为随机权重），视频 4 倍慢放。batch 1 时录制服务器受 CPU 发射速度限制，会掩盖计算上的节省，所以使用每批 16 块。
+- **R3 超分画质**：训练好的 MambaIR 与 EQ-MambaIR 在 Urban100 img039 上的真实输出，红框放大条纹立面：EQ-MambaIR 整图 +0.64 dB、框内 +6.4 dB。Flash EQ-Linear 计算的是同样的等变层，输出同一张图（FP32 实测最大差异 9e-6）。

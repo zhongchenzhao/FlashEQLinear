@@ -115,6 +115,7 @@ h2 { font-size: 20px; margin: 36px 0 4px; letter-spacing: -0.01em; }
 .card-kicker { font-size: 12.5px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
 .card h3 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
 .card p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+.card.wide { grid-column: 1 / -1; }
 .card .actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: auto; padding-top: 4px; font-size: 14px; }
 .btn { display: inline-block; border-radius: 8px; padding: 7px 14px; font-weight: 600; font-size: 14px; text-decoration: none; }
 .btn.primary { background: var(--btn); color: #ffffff; }
@@ -231,8 +232,8 @@ h2 { font-size: 20px; margin: 36px 0 4px; letter-spacing: -0.01em; }
     </article>
   </div>
 
-  <h2 data-i18n="recordedTitle">Recorded real runs</h2>
-  <p class="section-sub" data-i18n="recordedSub">Naive and Flash versions do the same work on RTX 4090 GPUs; only the equivariant linear layers differ.</p>
+  <h2 data-i18n="recordedTitle">Real runs and real outputs</h2>
+  <p class="section-sub" data-i18n="recordedSub">Each race puts a standard network next to its naive and Flash equivariant versions on RTX 4090 GPUs.</p>
   <div class="cards">
     <article class="card">
       <div class="card-kicker">R1</div>
@@ -240,10 +241,10 @@ h2 { font-size: 20px; margin: 36px 0 4px; letter-spacing: -0.01em; }
         <source src="r1_terminal_race/r1_vit_h_fp32.mp4" type="video/mp4">
       </video>
       <h3 data-i18n="r1Title">Live terminal race</h3>
-      <p data-i18n="r1Text">Naive EQ-ViT-H on one GPU and Flash EQ-ViT-H on another start together and push the same 3,200 images through the network (FP32, batch 128, 224 × 224).</p>
+      <p data-i18n="r1Text">Standard ViT-H, naive EQ-ViT-H and Flash EQ-ViT-H each get a GPU, start together and push the same 3,200 images through the network (FP32, batch 128, 224 × 224).</p>
       <ul class="facts">
-        <li data-i18n-html="r1Fact1"><strong>1.69× faster:</strong> 13.3 s vs. 22.5 s</li>
-        <li data-i18n-html="r1Fact2">Measured 142 → 241 img/s; paper Table 3: 139 → 232 img/s</li>
+        <li data-i18n-html="r1Fact1"><strong>Flash 1.69× faster</strong> than ViT-H and 1.66× faster than naive EQ-ViT-H: 13.4 s vs. 22.5 s and 22.2 s</li>
+        <li data-i18n-html="r1Fact2">Naive EQ-ViT-H matches ViT-H (1.01×) with 4.0× fewer parameters. Measured 142 / 144 / 240 img/s; paper Table 3: 139 / 139 / 232.</li>
       </ul>
       <div class="actions file-links">
         <a href="r1_terminal_race/r1_vit_h_fp32.gif" data-i18n="gif">GIF</a>
@@ -252,27 +253,42 @@ h2 { font-size: 20px; margin: 36px 0 4px; letter-spacing: -0.01em; }
     </article>
     <article class="card">
       <div class="card-kicker">R2</div>
-      <video class="video" id="r2Video" controls muted loop playsinline preload="metadata" poster="r2_sr_race/r2_sr_race_en_poster.jpg" aria-label="Super-resolution race video">
-        <source id="r2Source" src="r2_sr_race/r2_sr_race_en.mp4" type="video/mp4">
+      <video class="video" data-lang-video="r2_sr_race/r2_sr_race_" controls muted loop playsinline preload="metadata" poster="r2_sr_race/r2_sr_race_en_poster.jpg" aria-label="Super-resolution race video">
+        <source src="r2_sr_race/r2_sr_race_en.mp4" type="video/mp4">
       </video>
-      <h3 data-i18n="r2Title">Super-resolution, patch by patch</h3>
-      <p data-i18n="r2Text">Naive and Flash EQ-SwinIR-LIIF upscale the same image ×2 as 294 low-resolution patches of 48 × 48 (batch 1, FP32, the paper's Table 4 setting). A patch turns sharp when the network finished it in the recorded run.</p>
+      <h3 data-i18n="r2Title">Super-resolution race, patch by patch</h3>
+      <p data-i18n="r2Text">SwinIR-LIIF, naive EQ-SwinIR-LIIF and Flash EQ-SwinIR-LIIF upscale the same image ×2 as 294 patches of 48 × 48, 16 per batch (FP32). Patches turn sharp when their batch finished in the recorded run.</p>
       <ul class="facts">
-        <li data-i18n-html="r2Fact1"><strong>1.24× faster:</strong> 10.5 s vs. 13.0 s; paper Table 4: 1.26×</li>
-        <li data-i18n-html="r2Fact2">The picture is the reference high-resolution image: the networks use random weights, so only the timings are real.</li>
+        <li data-i18n-html="r2Fact1"><strong>Flash 1.25× faster</strong> than SwinIR-LIIF and 1.29× faster than naive EQ: 2.16 s vs. 2.71 s and 2.79 s</li>
+        <li data-i18n-html="r2Fact2">Naive EQ runs at 0.97× the speed of SwinIR-LIIF with 3.9× fewer parameters. The picture is the reference image (random weights), played 4× slower.</li>
       </ul>
-      <p class="caveat" data-i18n="r2Caveat">At batch 1 this server's CPU limits the launch rate, so absolute times are longer than in Table 4; the ratio is unaffected.</p>
+      <p class="caveat" data-i18n="r2Caveat">At batch 1 this server's CPU limits kernel launches and hides the arithmetic savings, so the recording uses batches of 16 to keep the GPU busy.</p>
       <div class="actions file-links">
-        <a id="r2Gif" href="r2_sr_race/r2_sr_race_en.gif" data-i18n="gif">GIF</a>
-        <a id="r2Mp4" href="r2_sr_race/r2_sr_race_en.mp4" data-i18n="mp4">MP4</a>
+        <a data-lang-href="r2_sr_race/r2_sr_race_" data-ext=".gif" href="r2_sr_race/r2_sr_race_en.gif" data-i18n="gif">GIF</a>
+        <a data-lang-href="r2_sr_race/r2_sr_race_" data-ext=".mp4" href="r2_sr_race/r2_sr_race_en.mp4" data-i18n="mp4">MP4</a>
+      </div>
+    </article>
+    <article class="card wide">
+      <div class="card-kicker">R3</div>
+      <video class="video" data-lang-video="r3_sr_quality/r3_sr_quality_" controls muted loop playsinline preload="metadata" poster="r3_sr_quality/r3_sr_quality_en_poster.jpg" aria-label="Super-resolution quality comparison video">
+        <source src="r3_sr_quality/r3_sr_quality_en.mp4" type="video/mp4">
+      </video>
+      <h3 data-i18n="r3Title">Quality: what equivariance adds</h3>
+      <p data-i18n="r3Text">Real ×2 outputs of trained MambaIR and EQ-MambaIR on Urban100 img039. The red box marks the striped facade next to the 5F sign: MambaIR blurs the stripes and EQ-MambaIR recovers them.</p>
+      <ul class="facts">
+        <li data-i18n-html="r3Fact1"><strong>+0.64 dB</strong> on the whole image and <strong>+6.4 dB</strong> inside the box (Y-PSNR against the ground truth)</li>
+        <li data-i18n-html="r3Fact2">Flash EQ-Linear computes the same equivariant layers, so Flash EQ-MambaIR produces this same image (largest difference 9e-6 in an FP32 check).</li>
+      </ul>
+      <div class="actions file-links">
+        <a data-lang-href="r3_sr_quality/r3_sr_quality_" data-ext=".gif" href="r3_sr_quality/r3_sr_quality_en.gif" data-i18n="gif">GIF</a>
+        <a data-lang-href="r3_sr_quality/r3_sr_quality_" data-ext=".mp4" href="r3_sr_quality/r3_sr_quality_en.mp4" data-i18n="mp4">MP4</a>
       </div>
     </article>
   </div>
 
-
   <footer class="notes">
-    <p data-i18n="note1">Paper numbers are from single-GPU runs on an NVIDIA RTX 4090 (24 GB). Recordings R1 and R2 were made on a different RTX 4090 server.</p>
-    <p data-i18n="note2">Image in R2: DIV2K validation image 0821 (DIV2K is distributed for academic research).</p>
+    <p data-i18n="note1">Paper numbers are from single-GPU runs on an NVIDIA RTX 4090 (24 GB). R1 and R2 were recorded on a different RTX 4090 server.</p>
+    <p data-i18n="note2">Images: DIV2K validation 0821 in R2 and Urban100 img039 in R3; both datasets are distributed for academic research.</p>
   </footer>
 </main>
 
@@ -299,20 +315,24 @@ h2 { font-size: 20px; margin: 36px 0 4px; letter-spacing: -0.01em; }
       s2Title: "How it works",
       s2Text: "A five-step animation: the circulant matrix of an equivariant layer, the Fourier transform that makes it diagonal, conjugate symmetry, and the inverse transform that returns the same result. Change the group size T to see the bound grow.",
       open: "Open",
-      recordedTitle: "Recorded real runs",
-      recordedSub: "Naive and Flash versions do the same work on RTX 4090 GPUs; only the equivariant linear layers differ.",
+      recordedTitle: "Real runs and real outputs",
+      recordedSub: "Each race puts a standard network next to its naive and Flash equivariant versions on RTX 4090 GPUs.",
       r1Title: "Live terminal race",
-      r1Text: "Naive EQ-ViT-H on one GPU and Flash EQ-ViT-H on another start together and push the same 3,200 images through the network (FP32, batch 128, 224 × 224).",
-      r1Fact1: "<strong>1.69× faster:</strong> 13.3 s vs. 22.5 s",
-      r1Fact2: "Measured 142 → 241 img/s; paper Table 3: 139 → 232 img/s",
-      r2Title: "Super-resolution, patch by patch",
-      r2Text: "Naive and Flash EQ-SwinIR-LIIF upscale the same image ×2 as 294 low-resolution patches of 48 × 48 (batch 1, FP32, the paper's Table 4 setting). A patch turns sharp when the network finished it in the recorded run.",
-      r2Fact1: "<strong>1.24× faster:</strong> 10.5 s vs. 13.0 s; paper Table 4: 1.26×",
-      r2Fact2: "The picture is the reference high-resolution image: the networks use random weights, so only the timings are real.",
-      r2Caveat: "At batch 1 this server's CPU limits the launch rate, so absolute times are longer than in Table 4; the ratio is unaffected.",
+      r1Text: "Standard ViT-H, naive EQ-ViT-H and Flash EQ-ViT-H each get a GPU, start together and push the same 3,200 images through the network (FP32, batch 128, 224 × 224).",
+      r1Fact1: "<strong>Flash 1.69× faster</strong> than ViT-H and 1.66× faster than naive EQ-ViT-H: 13.4 s vs. 22.5 s and 22.2 s",
+      r1Fact2: "Naive EQ-ViT-H matches ViT-H (1.01×) with 4.0× fewer parameters. Measured 142 / 144 / 240 img/s; paper Table 3: 139 / 139 / 232.",
+      r2Title: "Super-resolution race, patch by patch",
+      r2Text: "SwinIR-LIIF, naive EQ-SwinIR-LIIF and Flash EQ-SwinIR-LIIF upscale the same image ×2 as 294 patches of 48 × 48, 16 per batch (FP32). Patches turn sharp when their batch finished in the recorded run.",
+      r2Fact1: "<strong>Flash 1.25× faster</strong> than SwinIR-LIIF and 1.29× faster than naive EQ: 2.16 s vs. 2.71 s and 2.79 s",
+      r2Fact2: "Naive EQ runs at 0.97× the speed of SwinIR-LIIF with 3.9× fewer parameters. The picture is the reference image (random weights), played 4× slower.",
+      r2Caveat: "At batch 1 this server's CPU limits kernel launches and hides the arithmetic savings, so the recording uses batches of 16 to keep the GPU busy.",
+      r3Title: "Quality: what equivariance adds",
+      r3Text: "Real ×2 outputs of trained MambaIR and EQ-MambaIR on Urban100 img039. The red box marks the striped facade next to the 5F sign: MambaIR blurs the stripes and EQ-MambaIR recovers them.",
+      r3Fact1: "<strong>+0.64 dB</strong> on the whole image and <strong>+6.4 dB</strong> inside the box (Y-PSNR against the ground truth)",
+      r3Fact2: "Flash EQ-Linear computes the same equivariant layers, so Flash EQ-MambaIR produces this same image (largest difference 9e-6 in an FP32 check).",
       gif: "GIF", mp4: "MP4",
-      note1: "Paper numbers are from single-GPU runs on an NVIDIA RTX 4090 (24 GB). Recordings R1 and R2 were made on a different RTX 4090 server.",
-      note2: "Image in R2: DIV2K validation image 0821 (DIV2K is distributed for academic research).",
+      note1: "Paper numbers are from single-GPU runs on an NVIDIA RTX 4090 (24 GB). R1 and R2 were recorded on a different RTX 4090 server.",
+      note2: "Images: DIV2K validation 0821 in R2 and Urban100 img039 in R3; both datasets are distributed for academic research.",
       themeAuto: "Auto", themeLight: "Light", themeDark: "Dark",
       themeAria: function (m) { return "Color theme: " + m; }
     },
@@ -331,20 +351,24 @@ h2 { font-size: 20px; margin: 36px 0 4px; letter-spacing: -0.01em; }
       s2Title: "加速原理",
       s2Text: "五步动画：等变层的循环矩阵、让它变成对角阵的傅里叶变换、共轭对称，以及得到相同结果的逆变换。改变群大小 T，看理论上限如何增长。",
       open: "打开",
-      recordedTitle: "真实运行录屏",
-      recordedSub: "朴素版和 Flash 版在 RTX 4090 上完成同样的工作，只有等变线性层不同。",
+      recordedTitle: "真实运行与真实输出",
+      recordedSub: "每场竞速都把标准网络和它的朴素等变版、Flash 等变版放在一起，在 RTX 4090 上实测。",
       r1Title: "终端实时竞速",
-      r1Text: "朴素 EQ-ViT-H 和 Flash EQ-ViT-H 各占一块 GPU，同时开始，处理同样的 3,200 张图像（FP32，batch 128，224 × 224）。",
-      r1Fact1: "<strong>快 1.69×：</strong>13.3 秒 vs. 22.5 秒",
-      r1Fact2: "实测 142 → 241 张/秒；论文表 3：139 → 232 张/秒",
-      r2Title: "超分辨率，逐块处理",
-      r2Text: "朴素与 Flash EQ-SwinIR-LIIF 把同一张图像按 294 个 48 × 48 低分辨率图块做 ×2 超分（batch 1，FP32，即论文表 4 的设置）。某个图块在录制中被网络处理完的时刻，它就变清晰。",
-      r2Fact1: "<strong>快 1.24×：</strong>10.5 秒 vs. 13.0 秒；论文表 4：1.26×",
-      r2Fact2: "画面为参考高清图：模型使用随机权重，只有计时是真实的。",
-      r2Caveat: "batch 1 时这台服务器的 CPU 限制了内核发射速度，所以绝对用时比表 4 长；加速比不受影响。",
+      r1Text: "标准 ViT-H、朴素 EQ-ViT-H 和 Flash EQ-ViT-H 各占一块 GPU，同时开始，处理同样的 3,200 张图像（FP32，batch 128，224 × 224）。",
+      r1Fact1: "<strong>Flash 比 ViT-H 快 1.69×</strong>，比朴素 EQ-ViT-H 快 1.66×：13.4 秒 vs. 22.5 秒、22.2 秒",
+      r1Fact2: "朴素 EQ-ViT-H 与 ViT-H 速度相当（1.01×），参数少 4.0×。实测 142 / 144 / 240 张/秒；论文表 3：139 / 139 / 232。",
+      r2Title: "超分竞速，逐块处理",
+      r2Text: "SwinIR-LIIF、朴素 EQ-SwinIR-LIIF 和 Flash EQ-SwinIR-LIIF 把同一张图像按 294 个 48 × 48 图块做 ×2 超分，每批 16 块（FP32）。某批图块在录制中处理完的时刻，它们就变清晰。",
+      r2Fact1: "<strong>Flash 比 SwinIR-LIIF 快 1.25×</strong>，比朴素 EQ 快 1.29×：2.16 秒 vs. 2.71 秒、2.79 秒",
+      r2Fact2: "朴素 EQ 的速度是 SwinIR-LIIF 的 0.97×，参数少 3.9×。画面为参考图（模型为随机权重），视频为 4 倍慢放。",
+      r2Caveat: "batch 1 时这台服务器的 CPU 限制了内核发射速度，会掩盖计算上的节省，所以录制时每批 16 块，让 GPU 保持满载。",
+      r3Title: "画质：等变带来了什么",
+      r3Text: "训练好的 MambaIR 与 EQ-MambaIR 在 Urban100 img039 上的真实 ×2 输出。红框标出 5F 标识旁的条纹立面：MambaIR 把条纹糊掉了，EQ-MambaIR 把它恢复了出来。",
+      r3Fact1: "整图 <strong>+0.64 dB</strong>，红框内 <strong>+6.4 dB</strong>（与原图计算 Y-PSNR）",
+      r3Fact2: "Flash EQ-Linear 计算的是同样的等变层，所以 Flash 版 EQ-MambaIR 输出的就是这张图（FP32 实测最大差异 9e-6）。",
       gif: "GIF", mp4: "MP4",
-      note1: "论文数据来自单张 NVIDIA RTX 4090（24 GB）。录屏 R1、R2 在另一台 RTX 4090 服务器上录制。",
-      note2: "R2 图像：DIV2K 验证集 0821（DIV2K 仅供学术研究使用）。",
+      note1: "论文数据来自单张 NVIDIA RTX 4090（24 GB）。R1、R2 在另一台 RTX 4090 服务器上录制。",
+      note2: "图像：R2 为 DIV2K 验证集 0821，R3 为 Urban100 img039；两个数据集都仅供学术研究使用。",
       themeAuto: "自动", themeLight: "浅色", themeDark: "深色",
       themeAria: function (m) { return "配色：" + m; }
     }
@@ -383,17 +407,21 @@ h2 { font-size: 20px; margin: 36px 0 4px; letter-spacing: -0.01em; }
     document.querySelectorAll("[data-lang]").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang));
     });
-    // The R2 video exists in both languages.
-    var video = $("r2Video"), src = "r2_sr_race/r2_sr_race_" + lang;
-    if ($("r2Source").getAttribute("src") !== src + ".mp4") {
-      var playing = !video.paused;
-      $("r2Source").setAttribute("src", src + ".mp4");
-      video.setAttribute("poster", src + "_poster.jpg");
-      video.load();
-      if (playing) video.play().catch(function () {});
-    }
-    $("r2Gif").setAttribute("href", src + ".gif");
-    $("r2Mp4").setAttribute("href", src + ".mp4");
+    // R2 and R3 exist in both languages.
+    document.querySelectorAll("video[data-lang-video]").forEach(function (video) {
+      var base = video.getAttribute("data-lang-video") + lang;
+      var source = video.querySelector("source");
+      if (source.getAttribute("src") !== base + ".mp4") {
+        var playing = !video.paused;
+        source.setAttribute("src", base + ".mp4");
+        video.setAttribute("poster", base + "_poster.jpg");
+        video.load();
+        if (playing) video.play().catch(function () {});
+      }
+    });
+    document.querySelectorAll("a[data-lang-href]").forEach(function (a) {
+      a.setAttribute("href", a.getAttribute("data-lang-href") + lang + a.getAttribute("data-ext"));
+    });
     applyTheme();
   }
   document.querySelectorAll("[data-lang]").forEach(function (b) {

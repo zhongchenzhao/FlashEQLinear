@@ -50,13 +50,17 @@ Since input features `X` and weights `W` are real-valued, their Fourier coeffici
 - [**Throughput race**](https://zhongchenzhao.github.io/FlashEQLinear/s1_throughput_race.html): standard, naive and Flash networks race through the same workload at the throughput measured in the paper.
 - [**How it works**](https://zhongchenzhao.github.io/FlashEQLinear/s2_principle.html): five animated steps from the circulant matrix to one product per frequency, with an adjustable group size T.
 
-**Live race on two RTX 4090s.** Naive vs. Flash EQ-ViT-H, FP32, batch 128: Flash finishes the same 3,200 images **1.69×** sooner.
+**Live race on three RTX 4090s.** Standard ViT-H, naive EQ-ViT-H and Flash EQ-ViT-H (FP32, batch 128) push the same 3,200 images. Flash finishes **1.69×** sooner than ViT-H; naive EQ-ViT-H keeps pace with ViT-H using 4× fewer parameters.
 
-![Naive vs. Flash EQ-ViT-H racing on two RTX 4090s](demo/r1_terminal_race/r1_vit_h_fp32.gif)
+![Standard, naive EQ and Flash EQ ViT-H racing on three RTX 4090s](demo/r1_terminal_race/r1_vit_h_fp32.gif)
 
-**Super-resolution, patch by patch.** EQ-SwinIR-LIIF on 48 × 48 patches at batch 1: **1.24×** faster. The picture shows the reference image; the timings are measured.
+**Super-resolution race.** SwinIR-LIIF, naive EQ-SwinIR-LIIF and Flash EQ-SwinIR-LIIF on 48 × 48 patches, 16 per batch: Flash is **1.25×** faster than the non-equivariant network. The picture shows the reference image; the timings are measured.
 
-![Naive vs. Flash EQ-SwinIR-LIIF, patch by patch](demo/r2_sr_race/r2_sr_race_en.gif)
+![SwinIR-LIIF, naive EQ and Flash EQ super-resolution race](demo/r2_sr_race/r2_sr_race_en.gif)
+
+**Super-resolution quality.** Trained MambaIR vs. EQ-MambaIR on Urban100 img039 (×2): EQ-MambaIR recovers the facade stripes that MambaIR blurs (**+6.4 dB** inside the box, +0.64 dB on the whole image). Flash EQ-Linear computes the same layers, so it produces the same image.
+
+![MambaIR vs. EQ-MambaIR with a zoom box](demo/r3_sr_quality/r3_sr_quality_en.gif)
 
 All demo pages and recordings are in [`demo/`](demo/README.md).
 
