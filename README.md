@@ -43,6 +43,25 @@ Since input features `X` and weights `W` are real-valued, their Fourier coeffici
 
 
 
+## 🎬 Demos
+
+**▶ [Open the interactive demos](https://zhongchenzhao.github.io/FlashEQLinear/)** (English / 中文, runs in the browser)
+
+- [**Throughput race**](https://zhongchenzhao.github.io/FlashEQLinear/s1_throughput_race.html): standard, naive and Flash networks race through the same workload at the throughput measured in the paper.
+- [**How it works**](https://zhongchenzhao.github.io/FlashEQLinear/s2_principle.html): five animated steps from the circulant matrix to one product per frequency, with an adjustable group size T.
+
+**Live race on two RTX 4090s.** Naive vs. Flash EQ-ViT-H, FP32, batch 128: Flash finishes the same 3,200 images **1.69×** sooner.
+
+![Naive vs. Flash EQ-ViT-H racing on two RTX 4090s](demo/r1_terminal_race/r1_vit_h_fp32.gif)
+
+**Super-resolution, patch by patch.** EQ-SwinIR-LIIF on 48 × 48 patches at batch 1: **1.24×** faster. The picture shows the reference image; the timings are measured.
+
+![Naive vs. Flash EQ-SwinIR-LIIF, patch by patch](demo/r2_sr_race/r2_sr_race_en.gif)
+
+All demo pages and recordings are in [`demo/`](demo/README.md).
+
+
+
 ## 📊 Results
 
 The following results are measured on a single **NVIDIA RTX 4090 (24 GB) / Ada (SM 89)**. 

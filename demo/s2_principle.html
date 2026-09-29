@@ -1,0 +1,1298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How It Works · Flash EQ-Linear</title>
+<meta name="description" content="Step-by-step animation of Flash EQ-Linear: a circulant equivariant layer, the DFT along the group axis, one product per frequency, conjugate symmetry and the inverse DFT.">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --accent: #2a78d6;
+  --accent-wash: rgba(42, 120, 214, 0.12);
+  --btn: #256abf;
+  --btn-hover: #1c5cab;
+  --link: #1c5cab;
+  --base-bar: #898781;
+  --good: #006300;
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.06), 0 4px 16px rgba(11, 11, 11, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #262624;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #45443f;
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --accent-wash: rgba(57, 135, 229, 0.18);
+    --btn: #256abf;
+    --btn-hover: #2a78d6;
+    --link: #86b6ef;
+    --base-bar: #7d7c75;
+    --good: #0ca30c;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #262624;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #45443f;
+  --border: rgba(255, 255, 255, 0.10);
+  --accent: #3987e5;
+  --accent-wash: rgba(57, 135, 229, 0.18);
+  --btn: #256abf;
+  --btn-hover: #2a78d6;
+  --link: #86b6ef;
+  --base-bar: #7d7c75;
+  --good: #0ca30c;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+a { color: var(--link); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.topbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; max-width: 1080px; margin: 0 auto; padding: 14px 16px; }
+.brand { font-weight: 700; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
+.brand span { color: var(--muted); font-weight: 500; }
+.nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+.nav a { color: var(--ink-2); text-decoration: none; }
+.nav a:hover { color: var(--ink); text-decoration: underline; }
+.nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.spacer { flex: 1; }
+.toggles { display: flex; gap: 8px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; color: var(--ink-2); cursor: pointer; font-size: 13.5px; white-space: nowrap; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"], .seg button[aria-checked="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
+.icon-btn { border: 0; background: var(--surface-2); color: var(--ink-2); border-radius: 8px; height: 32px; min-width: 32px; padding: 0 10px; cursor: pointer; font-size: 13.5px; }
+.icon-btn:hover { color: var(--ink); }
+
+main { max-width: 1080px; margin: 0 auto; padding: 8px 16px 48px; }
+.hero { padding: 20px 0 8px; }
+.eyebrow { margin: 0 0 6px; color: var(--muted); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+h1 { margin: 0 0 10px; font-size: clamp(28px, 5vw, 40px); line-height: 1.15; letter-spacing: -0.02em; }
+.lede { margin: 0; color: var(--ink-2); max-width: 780px; font-size: 16px; }
+h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.01em; }
+.sub { margin: 0 0 12px; color: var(--ink-2); font-size: 14px; }
+.card { background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--border), var(--shadow); padding: 22px; margin-top: 20px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 12.5px; color: var(--muted); }
+.btn { border: 0; border-radius: 8px; padding: 7px 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.btn.primary { background: var(--btn); color: #ffffff; min-width: 84px; }
+.btn.primary:hover { background: var(--btn-hover); }
+.btn.ghost { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--border); }
+.btn.ghost:hover { color: var(--ink); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.stepper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dots { display: flex; gap: 6px; }
+.dot { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 650; cursor: pointer; }
+.dot:hover { color: var(--ink); }
+.dot[aria-current="step"] { background: var(--btn); color: #ffffff; }
+.push-right { margin-left: auto; }
+
+.step-text { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: var(--surface-2); min-height: 168px; }
+.kicker { margin: 0 0 2px; color: var(--muted); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; }
+.step-text h2 { font-size: 20px; margin: 0 0 6px; }
+.step-text p { margin: 0 0 8px; max-width: 900px; }
+.formula { font-size: 16.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.formula, .step-body { overflow-wrap: anywhere; }
+sub, sup { font-size: 72%; line-height: 0; }
+
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.panel { margin: 0; padding: 12px 12px 6px; border-radius: 12px; box-shadow: 0 0 0 1px var(--border); min-width: 0; }
+.panel figcaption { font-size: 13.5px; font-weight: 650; margin-bottom: 2px; }
+.panel figcaption .tag { font-weight: 500; color: var(--muted); }
+.panel svg { display: block; width: 100%; height: auto; max-width: 600px; margin: 0 auto; }
+#svgB { transition: opacity 0.2s linear; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+.lg { display: inline-flex; align-items: center; gap: 7px; }
+.lg svg { flex: none; }
+
+.cost { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 14px 40px; align-items: start; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--grid); }
+.cost-title { grid-column: 1 / -1; margin: 0; font-size: 14px; font-weight: 650; }
+.cost-title span { font-weight: 400; color: var(--muted); }
+.cost-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.cost-label { font-size: 13px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
+.cost-key { width: 10px; height: 10px; border-radius: 2px; background: var(--base-bar); display: inline-block; }
+.cost-key.flash { background: var(--accent); }
+.cost-num { font-size: 30px; font-weight: 700; line-height: 1; }
+.tokens.naive { display: grid; gap: var(--tg); }
+.tokens.flash { display: flex; flex-direction: column; gap: var(--tg); }
+.tok { width: var(--tq); height: var(--tq); border-radius: 2px; box-shadow: inset 0 0 0 1px var(--axis); flex: none; }
+.naive .tok.on { background: var(--base-bar); box-shadow: none; }
+.flash .tok.on { background: var(--accent); box-shadow: none; }
+.flash .tok.free { box-shadow: inset 0 0 0 1px var(--accent); opacity: 0.45; }
+.frow { display: flex; align-items: center; gap: var(--tg); height: var(--tq); }
+.klabel { width: 38px; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
+.hero-col { justify-self: end; text-align: right; max-width: 320px; }
+.hero-figure { font-size: 56px; font-weight: 750; line-height: 1; letter-spacing: -0.03em; }
+.hero-figure.pending { color: var(--muted); opacity: 0.5; }
+.hero-label { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+.match { font-size: 13px; color: var(--good); margin-top: 8px; min-height: 20px; }
+
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+#scaling svg { display: block; width: 100%; height: auto; overflow: visible; }
+#scaling .pt { cursor: pointer; }
+#scaling .pt:focus { outline: none; }
+#scaling .pt:focus-visible .pt-ring { stroke: var(--accent); stroke-width: 2; }
+details.table-view { margin-top: 14px; }
+details.table-view summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
+table { border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
+th, td { text-align: right; padding: 6px 14px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+tr.sel td { font-weight: 700; }
+
+/* SVG roles */
+.cell-bg { fill: var(--surface-2); }
+.cell-bg.same { stroke: var(--accent); stroke-width: 2; }
+.g-axis { stroke: var(--axis); stroke-width: 1; }
+.bar-naive { fill: var(--base-bar); }
+.bar-flash { fill: var(--accent); }
+.ph-ring { fill: none; stroke: var(--axis); stroke-width: 1; }
+.ph-arm { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+.ph-tip { fill: var(--accent); }
+.hdr { fill: var(--ink-2); font-size: 12.5px; font-weight: 650; }
+.op { fill: var(--muted); font-size: 18px; }
+.g-num { fill: var(--ink-2); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.g-sub { fill: var(--muted); font-size: 9.5px; }
+.zero { fill: var(--muted); font-size: 11px; }
+.row-hi { fill: var(--accent-wash); }
+.arc { fill: none; stroke: var(--muted); stroke-width: 1.2; }
+.arrow-line { stroke: var(--ink-2); stroke-width: 1.5; }
+.arrow-head { fill: var(--ink-2); }
+.arrow-label { fill: var(--ink-2); font-size: 10.5px; font-weight: 650; }
+.rtag { fill: var(--muted); font-size: 9px; font-weight: 700; }
+.ax-grid { stroke: var(--grid); stroke-width: 1; }
+.ax-base { stroke: var(--axis); stroke-width: 1; }
+.ax-label { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.line-accent { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.dot-accent { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.dot-measured { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; }
+.crosshair { stroke: var(--ink-2); stroke-width: 1; }
+.lbl { fill: var(--ink); font-size: 12.5px; font-weight: 650; }
+.lbl-2 { fill: var(--ink-2); font-size: 12px; }
+.pt-ring { fill: transparent; stroke: none; }
+
+.tip { position: fixed; z-index: 10; pointer-events: none; min-width: 160px; max-width: 300px; background: var(--surface); color: var(--ink); border-radius: 10px; padding: 9px 12px; box-shadow: 0 0 0 1px var(--border), 0 8px 24px rgba(0, 0, 0, 0.14); font-size: 13px; }
+.tip[hidden] { display: none; }
+.tip .t-strong { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tip .t-2 { color: var(--ink-2); }
+
+.notes { margin-top: 26px; color: var(--muted); font-size: 13px; max-width: 860px; }
+.notes p { margin: 0 0 8px; }
+.next-link { display: inline-block; margin-top: 8px; font-weight: 600; }
+
+@media (max-width: 860px) {
+  .panels { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .card { padding: 16px; }
+  .cost { grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+  .hero-col { grid-column: 1 / -1; justify-self: start; text-align: left; }
+  .hero-figure { font-size: 48px; }
+  .push-right { margin-left: 0; }
+  .step-text { min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #svgB { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html">Flash EQ-Linear <span>· demo</span></a>
+  <nav class="nav" aria-label="Demos">
+    <a href="index.html" data-i18n="navHub">All demos</a>
+    <a href="s1_throughput_race.html" data-i18n="navS1">Throughput race</a>
+    <a href="s2_principle.html" aria-current="page" data-i18n="navS2">How it works</a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="toggles">
+    <div class="seg" role="group" aria-label="Language">
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    </div>
+    <button type="button" class="icon-btn" id="themeBtn" aria-label="Color theme"></button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow" data-i18n="eyebrow">Demo S2 · the principle</p>
+    <h1 data-i18n="title">Why is it faster?</h1>
+    <p class="lede" data-i18n="lede"></p>
+  </section>
+
+  <section class="card" id="stageCard">
+    <div class="controls">
+      <div class="field">
+        <span class="field-label" id="tLabel" data-i18n="tLabel">Group size T</span>
+        <div class="seg" id="tSeg" role="radiogroup" aria-labelledby="tLabel"></div>
+      </div>
+      <div class="stepper">
+        <button type="button" class="btn ghost" id="prevBtn">◀</button>
+        <div class="dots" id="dots"></div>
+        <button type="button" class="btn ghost" id="nextBtn">▶</button>
+        <button type="button" class="btn primary" id="playBtn"></button>
+      </div>
+      <button type="button" class="btn ghost push-right" id="shuffleBtn" data-i18n="shuffle">New numbers</button>
+    </div>
+
+    <div class="step-text" aria-live="polite">
+      <p class="kicker" id="stepKicker"></p>
+      <h2 id="stepTitle"></h2>
+      <p class="step-body" id="stepBody"></p>
+      <p class="formula" id="stepFormula"></p>
+    </div>
+
+    <div class="panels">
+      <figure class="panel">
+        <figcaption id="capA"></figcaption>
+        <svg id="svgA" role="img"></svg>
+      </figure>
+      <figure class="panel">
+        <figcaption id="capB"></figcaption>
+        <svg id="svgB" role="img"></svg>
+      </figure>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <div class="cost">
+      <p class="cost-title" id="costTitle"></p>
+      <div>
+        <div class="cost-head"><span class="cost-label"><span class="cost-key"></span><span id="naiveLabel"></span></span><span class="cost-num" id="naiveCount">0</span></div>
+        <div class="tokens naive" id="naiveTokens"></div>
+      </div>
+      <div>
+        <div class="cost-head"><span class="cost-label"><span class="cost-key flash"></span><span id="flashLabel"></span></span><span class="cost-num" id="flashCount">–</span></div>
+        <div class="tokens flash" id="flashTokens"></div>
+      </div>
+      <div class="hero-col">
+        <div class="hero-figure pending" id="speedup">–</div>
+        <div class="hero-label" id="speedupLabel"></div>
+        <div class="match" id="match"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="scaleTitle">
+    <h2 id="scaleTitle" data-i18n="scaleTitle">Bigger groups, bigger savings</h2>
+    <p class="sub" data-i18n="scaleSub"></p>
+    <div class="chart-legend" id="chartLegend"></div>
+    <div id="scaling"></div>
+    <details class="table-view">
+      <summary data-i18n="tableToggle">Show the numbers</summary>
+      <table id="scaleTable"></table>
+    </details>
+  </section>
+
+  <footer class="notes">
+    <p data-i18n="note1"></p>
+    <p data-i18n="note2"></p>
+    <p data-i18n="note3"></p>
+    <a class="next-link" href="s1_throughput_race.html" data-i18n="nextLink">See the measured speedups →</a>
+  </footer>
+</main>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var TS = [2, 4, 8, 16];
+  var STEP_MS = [0, 2400, 1800, 2400, 1500, 1500];
+  var READ_MS = 5200;
+  var MEASURED = 2.1; // best measured single-layer forward speedup at T = 4, paper Table 1
+
+  function sp(t) { return (t * t) / (2 * (t - 1)); }
+  function spText(t) { return sp(t).toFixed(2); }
+
+  // ---------------------------------------------------------------- strings
+  var STR = {
+    en: {
+      navHub: "All demos", navS1: "Throughput race", navS2: "How it works",
+      eyebrow: "Demo S2 · the principle",
+      title: "Why is it faster?",
+      lede: "An equivariant linear layer is a group convolution in disguise. In the Fourier domain the T × T circulant matrix becomes T independent products, and the symmetry of real signals lets us skip almost half of them. Step through it, or change the group size T.",
+      tLabel: "Group size T", shuffle: "New numbers",
+      prev: "Previous step", next: "Next step", play: "▶ Play", pause: "❚❚ Pause",
+      kicker: function (n) { return "Step " + n + " of 5"; },
+      capA: ["Group domain", "naive layer"], capB: ["Fourier domain", "Flash EQ-Linear"],
+      hdrW: "W (circulant)", hdrD: "diag(ŵ)", idft: "IDFT",
+      lgReal: "real value (bar shows sign and size)",
+      lgComplex: "complex value (arrow shows magnitude and phase)",
+      lgMirror: "mirror of another frequency, free",
+      costTitle: "Real multiplications", costPer: " per channel pair, per token",
+      naive: "Naive", flash: "Flash EQ-Linear",
+      speedupLabel: function (t) { return "theoretical speedup at T = " + t; },
+      match: function (d) { return "✓ Same y as the naive layer (largest difference " + d + ", floating-point rounding)"; },
+      matchExact: "✓ Same y as the naive layer, bit for bit",
+      tokReal: function (k) { return "k = " + k + ": real frequency, 1 multiplication"; },
+      tokComplex: function (k) { return "k = " + k + ": complex frequency, 4 real multiplications"; },
+      tokFree: function (k, m) { return "k = " + k + ": mirror of k = " + m + ", free"; },
+      tokNaive: function (t, n) { return "Row " + t + " of W · x: " + n + " multiplications"; },
+      kindReal: "real frequency", kindComplex: "complex frequency",
+      kindMirror: function (m) { return "mirror of k = " + m + " (free)"; },
+      zeroTip: "0: off-diagonal entries vanish in the Fourier basis",
+      flashY: "Flash", naiveY: "naive",
+      steps: [
+        { title: "The naive layer: a circulant matrix",
+          body: function (t) {
+            return "An equivariant linear layer for the cyclic group C<sub>" + t + "</sub>" + (t === 4 ? " (p4, rotations by 90°)" : "") +
+              " gives every channel " + t + " orientation copies. Each pair of input and output channels is mixed by a " + t + " × " + t +
+              " circulant matrix: every row is the row above shifted by one place. Computing y = W · x takes " + t + " × " + t + " = " + t * t +
+              " multiplications per channel pair.";
+          },
+          formula: function () { return "y<sub>t</sub> = Σ<sub>s</sub> w<sub>(t−s) mod T</sub> · x<sub>s</sub>"; } },
+        { title: "Fourier transform along the group axis",
+          body: function (t) {
+            return "Apply a length-" + t + " DFT to the orientation axis. By the convolution theorem, a circulant matrix is diagonal in the Fourier basis: the " +
+              t + " × " + t + " matrix collapses to " + t + " numbers ŵ<sub>k</sub>, and x becomes its spectrum x̂<sub>k</sub>. The DFT runs once per channel, not once per channel pair.";
+          },
+          formula: function () { return "x̂<sub>k</sub> = Σ<sub>s</sub> x<sub>s</sub> e<sup>−2πi·ks/T</sup> &nbsp;&nbsp;·&nbsp;&nbsp; F W F<sup>−1</sup> = diag(ŵ)"; } },
+        { title: "One product per frequency",
+          body: function (t) {
+            if (t === 2) return "Each frequency now needs a single product ŷ<sub>k</sub> = ŵ<sub>k</sub> · x̂<sub>k</sub>. With T = 2 both frequencies (k = 0 and k = 1) are real, so this costs 2 multiplications instead of 4.";
+            return "Each frequency now needs a single product ŷ<sub>k</sub> = ŵ<sub>k</sub> · x̂<sub>k</sub>. Frequencies k = 0 and k = " + t / 2 +
+              " are real and cost 1 multiplication each; the other " + (t - 2) + " are complex and cost 4 real multiplications each. Total: " +
+              (4 * t - 6) + " instead of " + t * t + ".";
+          },
+          formula: function () { return "ŷ<sub>k</sub> = ŵ<sub>k</sub> · x̂<sub>k</sub>"; } },
+        { title: "Conjugate symmetry: half the spectrum is free",
+          body: function (t) {
+            if (t === 2) return "Real inputs have conjugate-symmetric spectra, x̂<sub>T−k</sub> = conj(x̂<sub>k</sub>). With T = 2 there is no mirrored pair to skip, so the count stays at 2.";
+            var mirror = t === 4 ? "Frequency k = 3 mirrors k = 1." :
+              "Frequencies k = " + (t / 2 + 1) + " … " + (t - 1) + " mirror k = " + (t / 2 - 1) + " … 1.";
+            return "Inputs and weights are real, so their spectra are conjugate-symmetric: x̂<sub>T−k</sub> = conj(x̂<sub>k</sub>), and the same holds for ŵ and ŷ. " +
+              mirror + " Only k = 0 … " + t / 2 + " are computed: " + (2 * t - 2) + " multiplications.";
+          },
+          formula: function () { return "x̂<sub>T−k</sub> = conj(x̂<sub>k</sub>) &nbsp;⇒&nbsp; ŷ<sub>T−k</sub> = conj(ŷ<sub>k</sub>)"; } },
+        { title: "Back to the group axis: same result, fewer multiplications",
+          body: function (t) {
+            return "The inverse DFT turns ŷ back into y, and it matches the naive result up to floating-point rounding, so the speedup is lossless. Per channel pair the cost falls from T² = " +
+              t * t + " to 2(T − 1) = " + (2 * t - 2) + " multiplications: a theoretical speedup of " + spText(t) + "× at T = " + t + ".";
+          },
+          formula: function (t) { return "y = IDFT(ŷ) &nbsp;&nbsp;·&nbsp;&nbsp; T² / 2(T − 1) = " + spText(t) + "×"; } }
+      ],
+      scaleTitle: "Bigger groups, bigger savings",
+      scaleSub: "Theoretical speedup T² / 2(T − 1) of one equivariant linear layer. Select T = 2, 4, 8 or 16 on the chart.",
+      legTheory: "Theoretical (ratio of multiplication counts)",
+      legMeasured: "Measured on RTX 4090 (one layer, paper Table 1)",
+      selLabel: function (s, t) { return s + "× at T = " + t; },
+      measuredLabel: "measured 2.1×",
+      axisX: "group size T",
+      chartTip: function (t) { return "T = " + t + ": " + t * t + " → " + (2 * t - 2) + " multiplications"; },
+      tableToggle: "Show the numbers",
+      thead: ["T", "Naive T²", "Flash 2(T − 1)", "Speedup"],
+      note1: "Counts are real multiplications per (input, output) channel pair and per token. A complex product costs 4 real multiplications; a product at a real frequency (k = 0 or T/2) costs 1.",
+      note2: "The DFT and inverse DFT are applied once per channel rather than once per channel pair, so in layers with many channels they cost little next to what they save.",
+      note3: "The paper uses T = 4 (p4: rotations by 90°), where the bound is 2.67×. On an RTX 4090 the measured forward speedup reaches 2.1× for a single layer and 1.7× end to end.",
+      nextLink: "See the measured speedups in the throughput race →",
+      themeAuto: "Auto", themeLight: "Light", themeDark: "Dark",
+      themeAria: function (m) { return "Color theme: " + m; },
+      stepAria: function (n, title) { return "Step " + n + ": " + title; },
+      tAria: function (t) { return "Group size " + t; }
+    },
+    zh: {
+      navHub: "全部演示", navS1: "吞吐量竞速", navS2: "加速原理",
+      eyebrow: "演示 S2 · 加速原理",
+      title: "为什么更快？",
+      lede: "等变线性层本质上是一个群卷积。到了傅里叶域，T × T 的循环矩阵变成 T 个相互独立的乘积；再利用实信号的共轭对称性，还能省掉将近一半。可以逐步查看，也可以改变群大小 T。",
+      tLabel: "群大小 T", shuffle: "换一组数",
+      prev: "上一步", next: "下一步", play: "▶ 播放", pause: "❚❚ 暂停",
+      kicker: function (n) { return "第 " + n + " 步，共 5 步"; },
+      capA: ["群域", "朴素实现"], capB: ["傅里叶域", "Flash EQ-Linear"],
+      hdrW: "W（循环矩阵）", hdrD: "diag(ŵ)", idft: "IDFT",
+      lgReal: "实数值（柱表示符号与大小）",
+      lgComplex: "复数值（箭头表示幅值与相位）",
+      lgMirror: "其他频率的镜像，免费得到",
+      costTitle: "实数乘法次数", costPer: "（每个 token、每对通道）",
+      naive: "朴素实现", flash: "Flash EQ-Linear",
+      speedupLabel: function (t) { return "T = " + t + " 时的理论加速比"; },
+      match: function (d) { return "✓ 与朴素实现得到相同的 y（最大差异 " + d + "，浮点舍入）"; },
+      matchExact: "✓ 与朴素实现得到的 y 逐位相同",
+      tokReal: function (k) { return "k = " + k + "：实频率，1 次乘法"; },
+      tokComplex: function (k) { return "k = " + k + "：复频率，4 次实数乘法"; },
+      tokFree: function (k, m) { return "k = " + k + "：k = " + m + " 的镜像，免费"; },
+      tokNaive: function (t, n) { return "W · x 第 " + t + " 行：" + n + " 次乘法"; },
+      kindReal: "实频率", kindComplex: "复频率",
+      kindMirror: function (m) { return "k = " + m + " 的镜像（免费）"; },
+      zeroTip: "0：在傅里叶基下非对角元全部为零",
+      flashY: "Flash", naiveY: "朴素",
+      steps: [
+        { title: "朴素实现：循环矩阵乘法",
+          body: function (t) {
+            return "循环群 C<sub>" + t + "</sub>" + (t === 4 ? "（p4，每次旋转 90°）" : "") + " 的等变线性层让每个通道带有 " + t +
+              " 个方向副本。每一对输入、输出通道之间是一个 " + t + " × " + t + " 的循环矩阵：每一行都是上一行循环右移一格。计算 y = W · x，每对通道需要 " +
+              t + " × " + t + " = " + t * t + " 次乘法。";
+          },
+          formula: function () { return "y<sub>t</sub> = Σ<sub>s</sub> w<sub>(t−s) mod T</sub> · x<sub>s</sub>"; } },
+        { title: "沿群维做傅里叶变换",
+          body: function (t) {
+            return "对方向维做长度为 " + t + " 的 DFT。由卷积定理，循环矩阵在傅里叶基下是对角阵：" + t + " × " + t + " 矩阵坍缩为 " + t +
+              " 个数 ŵ<sub>k</sub>，x 变为它的频谱 x̂<sub>k</sub>。DFT 对每个通道只做一次，而不是每对通道各做一次。";
+          },
+          formula: function () { return "x̂<sub>k</sub> = Σ<sub>s</sub> x<sub>s</sub> e<sup>−2πi·ks/T</sup> &nbsp;&nbsp;·&nbsp;&nbsp; F W F<sup>−1</sup> = diag(ŵ)"; } },
+        { title: "每个频率只需一次乘积",
+          body: function (t) {
+            if (t === 2) return "现在每个频率只需一次乘积 ŷ<sub>k</sub> = ŵ<sub>k</sub> · x̂<sub>k</sub>。T = 2 时两个频率（k = 0 和 k = 1）都是实数，只需 2 次乘法，而不是 4 次。";
+            return "现在每个频率只需一次乘积 ŷ<sub>k</sub> = ŵ<sub>k</sub> · x̂<sub>k</sub>。k = 0 和 k = " + t / 2 + " 两个频率是实数，各需 1 次乘法；其余 " +
+              (t - 2) + " 个是复数，各需 4 次实数乘法。合计 " + (4 * t - 6) + " 次，而不是 " + t * t + " 次。";
+          },
+          formula: function () { return "ŷ<sub>k</sub> = ŵ<sub>k</sub> · x̂<sub>k</sub>"; } },
+        { title: "共轭对称：一半频谱是免费的",
+          body: function (t) {
+            if (t === 2) return "实数输入的频谱共轭对称：x̂<sub>T−k</sub> = conj(x̂<sub>k</sub>)。T = 2 时没有可以省去的镜像对，乘法仍是 2 次。";
+            var mirror = t === 4 ? "频率 k = 3 是 k = 1 的镜像。" :
+              "频率 k = " + (t / 2 + 1) + " … " + (t - 1) + " 是 k = " + (t / 2 - 1) + " … 1 的镜像。";
+            return "输入和权重都是实数，所以频谱共轭对称：x̂<sub>T−k</sub> = conj(x̂<sub>k</sub>)，ŵ 和 ŷ 同理。" + mirror +
+              "只需计算 k = 0 … " + t / 2 + "，共 " + (2 * t - 2) + " 次乘法。";
+          },
+          formula: function () { return "x̂<sub>T−k</sub> = conj(x̂<sub>k</sub>) &nbsp;⇒&nbsp; ŷ<sub>T−k</sub> = conj(ŷ<sub>k</sub>)"; } },
+        { title: "回到群域：结果相同，乘法更少",
+          body: function (t) {
+            return "逆 DFT 把 ŷ 变回 y，与朴素实现的结果一致（只差浮点舍入），加速是无损的。每对通道的乘法次数从 T² = " + t * t +
+              " 降到 2(T − 1) = " + (2 * t - 2) + "，T = " + t + " 时理论加速比为 " + spText(t) + "×。";
+          },
+          formula: function (t) { return "y = IDFT(ŷ) &nbsp;&nbsp;·&nbsp;&nbsp; T² / 2(T − 1) = " + spText(t) + "×"; } }
+      ],
+      scaleTitle: "群越大，省得越多",
+      scaleSub: "单个等变线性层的理论加速比 T² / 2(T − 1)。可在图中选择 T = 2、4、8、16。",
+      legTheory: "理论值（乘法次数之比）",
+      legMeasured: "RTX 4090 实测（单层，论文表 1）",
+      selLabel: function (s, t) { return "T = " + t + " 时 " + s + "×"; },
+      measuredLabel: "实测 2.1×",
+      axisX: "群大小 T",
+      chartTip: function (t) { return "T = " + t + "：" + t * t + " → " + (2 * t - 2) + " 次乘法"; },
+      tableToggle: "查看数据",
+      thead: ["T", "朴素 T²", "Flash 2(T − 1)", "加速比"],
+      note1: "乘法次数按每个 token、每对（输入、输出）通道统计。一次复数乘法需要 4 次实数乘法；实频率（k = 0 或 T/2）上的乘积只需 1 次。",
+      note2: "DFT 和逆 DFT 对每个通道只做一次，而不是每对通道做一次，所以在通道较多的层里，这部分开销远小于省下的乘法。",
+      note3: "论文使用 T = 4（p4：每次旋转 90°），理论上限 2.67×。在 RTX 4090 上，单层前向实测最高 2.1×，端到端 1.7×。",
+      nextLink: "去看实测加速：吞吐量竞速 →",
+      themeAuto: "自动", themeLight: "浅色", themeDark: "深色",
+      themeAria: function (m) { return "配色：" + m; },
+      stepAria: function (n, title) { return "第 " + n + " 步：" + title; },
+      tAria: function (t) { return "群大小 " + t; }
+    }
+  };
+
+  // ---------------------------------------------------------------- helpers
+  var $ = function (id) { return document.getElementById(id); };
+  function S() { return STR[lang]; }
+  function load(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function save(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  function ease(p) { return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; }
+  var SUBS = "₀₁₂₃₄₅₆₇₈₉", SUPS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+  function sub(n) { return String(n).replace(/\d/g, function (c) { return SUBS[+c]; }); }
+  function fmtNum(v) {
+    if (Math.abs(v) < 0.005) return "0.00";
+    return (v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+  }
+  function fmtC(z) {
+    var re = Math.abs(z[0]) < 0.005 ? 0 : z[0], im = Math.abs(z[1]) < 0.005 ? 0 : z[1];
+    if (im === 0) return fmtNum(re);
+    return fmtNum(re) + (im < 0 ? " − " : " + ") + Math.abs(im).toFixed(2) + "i";
+  }
+  function fmtSci(d) {
+    if (d === 0) return "0";
+    var e = Math.floor(Math.log10(d)), m = d / Math.pow(10, e);
+    var exp = (e < 0 ? "⁻" : "") + String(Math.abs(e)).replace(/\d/g, function (c) { return SUPS[+c]; });
+    return m.toFixed(1) + " × 10" + exp;
+  }
+
+  // ---------------------------------------------------------------- math
+  function mod(a, n) { return ((a % n) + n) % n; }
+  function randVec(n) {
+    var v = [];
+    for (var i = 0; i < n; i++) {
+      var r = 0;
+      while (r === 0) r = Math.round((Math.random() * 2 - 1) * 9) / 10;
+      v.push(r);
+    }
+    return v;
+  }
+  function dft(v) {
+    var n = v.length, out = [];
+    for (var k = 0; k < n; k++) {
+      var re = 0, im = 0;
+      for (var s = 0; s < n; s++) {
+        var a = -2 * Math.PI * k * s / n;
+        re += v[s] * Math.cos(a);
+        im += v[s] * Math.sin(a);
+      }
+      out.push([re, im]);
+    }
+    return out;
+  }
+  function idft(z) {
+    var n = z.length, out = [];
+    for (var t = 0; t < n; t++) {
+      var re = 0;
+      for (var k = 0; k < n; k++) {
+        var a = 2 * Math.PI * k * t / n;
+        re += z[k][0] * Math.cos(a) - z[k][1] * Math.sin(a);
+      }
+      out.push(re / n);
+    }
+    return out;
+  }
+  function cmul(a, b) { return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]]; }
+  function absMax(v) { return v.reduce(function (m, a) { return Math.max(m, Math.abs(a)); }, 0); }
+  function magMax(z) { return z.reduce(function (m, a) { return Math.max(m, Math.hypot(a[0], a[1])); }, 0); }
+  function compute(x, w) {
+    var n = x.length, yN = [];
+    for (var t = 0; t < n; t++) {
+      var acc = 0;
+      for (var s = 0; s < n; s++) acc += w[mod(t - s, n)] * x[s];
+      yN.push(acc);
+    }
+    var X = dft(x), Wh = dft(w), Yh = [];
+    for (var k = 0; k < n; k++) Yh.push(cmul(Wh[k], X[k]));
+    var yF = idft(Yh), diff = 0;
+    for (t = 0; t < n; t++) diff = Math.max(diff, Math.abs(yF[t] - yN[t]));
+    return { x: x, w: w, yN: yN, X: X, Wh: Wh, Yh: Yh, yF: yF, diff: diff };
+  }
+  function isReal(k) { return k === 0 || 2 * k === T; }
+  function isMirror(k) { return k > T / 2; }
+  function cost(k) { return isReal(k) ? 1 : 4; }
+
+  // ---------------------------------------------------------------- state
+  var params = new URLSearchParams(location.search);
+  var lang = params.get("lang") || load("feq-lang") || ((navigator.language || "").toLowerCase().indexOf("zh") === 0 ? "zh" : "en");
+  if (!STR[lang]) lang = "en";
+  var theme = load("feq-theme") || "auto";
+  var hostTheme = document.documentElement.getAttribute("data-theme");
+  var T = TS.indexOf(+params.get("T")) >= 0 ? +params.get("T") : 4;
+  var step = 1, tau = 0, raf = 0, playing = false, playTimer = 0, started = false;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var data = compute(randVec(T), randVec(T));
+  var els = null;
+
+  // ---------------------------------------------------------------- SVG helpers
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function label(parent, x, y, str, cls, attrs) {
+    var a = { x: x, y: y, "class": cls || "" };
+    for (var k in attrs || {}) a[k] = attrs[k];
+    var t = el("text", a, parent);
+    t.textContent = str;
+    return t;
+  }
+  function cellBg(parent, cx, cy, s) {
+    return el("rect", { x: cx - s / 2 + 1, y: cy - s / 2 + 1, width: s - 2, height: s - 2, rx: Math.min(5, s / 6), "class": "cell-bg" }, parent);
+  }
+  function realGlyph(parent, cx, cy, s, cls, withText) {
+    var g = el("g", {}, parent);
+    var bw = Math.max(3, Math.round(s * 0.26));
+    var half = withText ? s / 2 - 13 : s / 2 - 5;
+    var base = withText ? cy - 6 : cy;
+    el("line", { x1: cx - s / 2 + 5, x2: cx + s / 2 - 5, y1: base, y2: base, "class": "g-axis" }, g);
+    var bar = el("rect", { x: cx - bw / 2, y: base, width: bw, height: 0, rx: 1.5, "class": cls }, g);
+    var num = withText ? label(g, cx, cy + s / 2 - 7, "", "g-num", { "text-anchor": "middle" }) : null;
+    return {
+      g: g,
+      set: function (v, vmax, scale, showText) {
+        var h = vmax > 0 ? (Math.abs(v) / vmax) * half * scale : 0;
+        bar.setAttribute("y", v >= 0 ? base - h : base);
+        bar.setAttribute("height", Math.max(0, h));
+        if (num) num.textContent = showText ? fmtNum(v) : "";
+      }
+    };
+  }
+  function phasor(parent, cx, cy, s) {
+    var g = el("g", {}, parent);
+    var r = s / 2 - 4;
+    el("circle", { cx: cx, cy: cy, r: r, "class": "ph-ring" }, g);
+    el("line", { x1: cx - r, x2: cx + r, y1: cy, y2: cy, "class": "g-axis" }, g);
+    var arm = el("line", { x1: cx, y1: cy, x2: cx, y2: cy, "class": "ph-arm" }, g);
+    var tip = el("circle", { cx: cx, cy: cy, r: Math.max(1.8, s / 17), "class": "ph-tip" }, g);
+    return {
+      g: g,
+      set: function (z, zmax, scale) {
+        var mag = Math.hypot(z[0], z[1]);
+        var len = zmax > 0 ? (mag / zmax) * (r - 1) * scale : 0;
+        var a = Math.atan2(z[1], z[0]);
+        var x2 = cx + len * Math.cos(a), y2 = cy - len * Math.sin(a);
+        arm.setAttribute("x2", x2); arm.setAttribute("y2", y2);
+        tip.setAttribute("cx", x2); tip.setAttribute("cy", y2);
+        tip.setAttribute("opacity", scale > 0.02 ? 1 : 0);
+        arm.setAttribute("opacity", scale > 0.02 ? 1 : 0);
+      }
+    };
+  }
+  function headerText(parent, x, str) { return label(parent, x, 18, str, "hdr", { "text-anchor": "middle" }); }
+  function opText(parent, x, y, str) { return label(parent, x, y, str, "op", { "text-anchor": "middle" }); }
+
+  // ---------------------------------------------------------------- tooltip
+  function showTip(lines, cx, cy) {
+    var tip = $("tip");
+    tip.textContent = "";
+    lines.forEach(function (ln, i) {
+      var d = document.createElement("div");
+      d.className = i === 0 ? "t-strong" : "t-2";
+      d.textContent = ln;
+      tip.appendChild(d);
+    });
+    tip.hidden = false;
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = cx + 14, top = cy + 14;
+    if (left + w > window.innerWidth - 8) left = cx - w - 14;
+    if (top + h > window.innerHeight - 8) top = cy - h - 14;
+    tip.style.left = Math.max(8, left) + "px";
+    tip.style.top = Math.max(8, top) + "px";
+  }
+  function hideTip() { $("tip").hidden = true; }
+  function tipOn(node, fn, onEnter, onLeave) {
+    node.addEventListener("pointermove", function (e) { showTip(fn(), e.clientX, e.clientY); });
+    node.addEventListener("pointerenter", function () { if (onEnter) onEnter(); });
+    node.addEventListener("pointerleave", function () { hideTip(); if (onLeave) onLeave(); });
+  }
+
+  // ---------------------------------------------------------------- layout & build
+  var VBW = 480;
+  function layout() {
+    var s = Math.min(52, Math.floor((VBW - 150) / (T + 3)));
+    var op = 26, arrow = 48, top = 30;
+    var wA = T * s + op + s + op + s;
+    var wB = wA + arrow + s;
+    var offA = Math.round((VBW - wA) / 2), offB = Math.round((VBW - wB) / 2);
+    return {
+      s: s, top: top, H: top + T * s + 8, op: op, arrow: arrow,
+      A: { mat: offA, x: offA + T * s + op, y: offA + T * s + 2 * op + s },
+      B: { mat: offB, x: offB + T * s + op, y: offB + T * s + 2 * op + s, f: offB + T * s + 2 * op + 2 * s + arrow }
+    };
+  }
+  function cy(L, row) { return L.top + row * L.s + L.s / 2; }
+
+  function build() {
+    var L = layout(), s = L.s, d = data, big = s >= 44, mid = s >= 28;
+    els = {
+      L: L, wCells: [], yCells: [], dCells: [], xh: [], yh: [], yf: [], arcs: [],
+      vmaxW: absMax(d.w), vmaxX: absMax(d.x), vmaxY: Math.max(absMax(d.yN), absMax(d.yF)),
+      zmaxW: magMax(d.Wh), zmaxX: magMax(d.X), zmaxY: magMax(d.Yh)
+    };
+
+    // Panel A: y = W · x
+    var A = $("svgA");
+    A.textContent = "";
+    A.setAttribute("viewBox", "0 0 " + VBW + " " + L.H);
+    var a = L.A;
+    els.hiA1 = el("rect", { "class": "row-hi", rx: 6, opacity: 0 }, A);
+    els.hiA2 = el("rect", { "class": "row-hi", rx: 6, opacity: 0 }, A);
+    headerText(A, a.mat + T * s / 2, S().hdrW);
+    headerText(A, a.x + s / 2, "x");
+    headerText(A, a.y + s / 2, "y");
+    opText(A, a.mat + T * s + L.op / 2, L.top + T * s / 2 + 6, "·");
+    opText(A, a.x + s + L.op / 2, L.top + T * s / 2 + 6, "=");
+    for (var t = 0; t < T; t++) {
+      var row = [];
+      for (var c = 0; c < T; c++) {
+        (function (t, c) {
+          var j = mod(t - c, T);
+          var g = el("g", {}, A);
+          var cx = a.mat + c * s + s / 2, yy = cy(L, t);
+          var bg = cellBg(g, cx, yy, s);
+          var gl = realGlyph(g, cx, yy, s, "bar-naive", false);
+          gl.set(d.w[j], els.vmaxW, 1, false);
+          if (mid) {
+            var lb = label(g, cx - s / 2 + 5, yy - s / 2 + 12, "w", "g-sub");
+            var ts = el("tspan", { dy: 2, "font-size": "8" }, lb);
+            ts.textContent = String(j);
+          }
+          row.push({ g: g, bg: bg, j: j });
+          tipOn(g, function () {
+            return ["W[" + t + ", " + c + "] = w" + sub(j) + " = " + fmtNum(d.w[j]), "(t − s) mod T = " + j];
+          }, function () { highlightJ(j, true); }, function () { highlightJ(j, false); });
+        })(t, c);
+      }
+      els.wCells.push(row);
+    }
+    for (t = 0; t < T; t++) {
+      (function (t) {
+        var g = el("g", {}, A);
+        cellBg(g, a.x + s / 2, cy(L, t), s);
+        var gl = realGlyph(g, a.x + s / 2, cy(L, t), s, "bar-naive", big);
+        gl.set(d.x[t], els.vmaxX, 1, true);
+        tipOn(g, function () { return ["x" + sub(t) + " = " + fmtNum(d.x[t])]; });
+        var gy = el("g", {}, A);
+        cellBg(gy, a.y + s / 2, cy(L, t), s);
+        var gly = realGlyph(gy, a.y + s / 2, cy(L, t), s, "bar-naive", big);
+        els.yCells.push({ glyph: gly });
+        tipOn(gy, function () { return ["y" + sub(t) + " = " + fmtNum(d.yN[t]), S().naiveY]; });
+      })(t);
+    }
+
+    // Panel B: diag(ŵ) · x̂ = ŷ  →  IDFT  →  y
+    var B = $("svgB");
+    B.textContent = "";
+    B.setAttribute("viewBox", "0 0 " + VBW + " " + L.H);
+    var b = L.B;
+    els.hiB1 = el("rect", { "class": "row-hi", rx: 6, opacity: 0 }, B);
+    els.hiB2 = el("rect", { "class": "row-hi", rx: 6, opacity: 0 }, B);
+    els.hiB3 = el("rect", { "class": "row-hi", rx: 6, opacity: 0 }, B);
+    headerText(B, b.mat + T * s / 2, S().hdrD);
+    headerText(B, b.x + s / 2, "x̂");
+    headerText(B, b.y + s / 2, "ŷ");
+    headerText(B, b.f + s / 2, "y");
+    opText(B, b.mat + T * s + L.op / 2, L.top + T * s / 2 + 6, "·");
+    opText(B, b.x + s + L.op / 2, L.top + T * s / 2 + 6, "=");
+    // IDFT arrow
+    var ax1 = b.y + s + 6, ax2 = b.f - 8, ay = L.top + T * s / 2;
+    els.idft = el("g", {}, B);
+    el("line", { x1: ax1, x2: ax2 - 4, y1: ay, y2: ay, "class": "arrow-line" }, els.idft);
+    el("path", { d: "M" + ax2 + "," + ay + " l-7,-4 v8 z", "class": "arrow-head" }, els.idft);
+    label(els.idft, (ax1 + ax2) / 2, ay - 7, S().idft, "arrow-label", { "text-anchor": "middle" });
+    // conjugate-pair arcs to the left of the matrix
+    for (var k = 1; k < T / 2; k++) {
+      var y1 = cy(L, k), y2 = cy(L, T - k);
+      var bulge = 5 + Math.min(b.mat - 8, 20) * (T / 2 - k) / Math.max(1, T / 2 - 1);
+      var x0 = b.mat - 3;
+      els.arcs.push(el("path", {
+        d: "M" + x0 + "," + y1 + " C" + (x0 - bulge) + "," + y1 + " " + (x0 - bulge) + "," + y2 + " " + x0 + "," + y2,
+        "class": "arc", opacity: 0
+      }, B));
+    }
+    for (t = 0; t < T; t++) {
+      var drow = [];
+      for (c = 0; c < T; c++) {
+        (function (t, c) {
+          var j = mod(t - c, T);
+          var g = el("g", {}, B);
+          var cx = b.mat + c * s + s / 2, yy = cy(L, t);
+          cellBg(g, cx, yy, s);
+          var copy = realGlyph(g, cx, yy, s, "bar-naive", false);
+          copy.set(d.w[j], els.vmaxW, 1, false);
+          var cell = { g: g, copy: copy };
+          if (t === c) {
+            cell.ph = phasor(g, cx, yy, s);
+            tipOn(g, function () { return ["ŵ" + sub(t) + " = " + fmtC(d.Wh[t]), kindText(t)]; });
+          } else {
+            if (mid) cell.zero = label(g, cx, yy + 4, "0", "zero", { "text-anchor": "middle", opacity: 0 });
+            tipOn(g, function () { return [S().zeroTip]; });
+          }
+          drow.push(cell);
+        })(t, c);
+      }
+      els.dCells.push(drow);
+    }
+    for (t = 0; t < T; t++) {
+      (function (k) {
+        var gx = el("g", {}, B);
+        cellBg(gx, b.x + s / 2, cy(L, k), s);
+        var phx = phasor(gx, b.x + s / 2, cy(L, k), s);
+        var gyh = el("g", {}, B);
+        cellBg(gyh, b.y + s / 2, cy(L, k), s);
+        var phy = phasor(gyh, b.y + s / 2, cy(L, k), s);
+        if (isReal(k) && mid) {
+          label(gx, b.x + s - 4, cy(L, k) - s / 2 + 11, "ℝ", "rtag", { "text-anchor": "end" });
+          label(gyh, b.y + s - 4, cy(L, k) - s / 2 + 11, "ℝ", "rtag", { "text-anchor": "end" });
+        }
+        els.xh.push({ g: gx, ph: phx });
+        els.yh.push({ g: gyh, ph: phy });
+        tipOn(gx, function () { return ["x̂" + sub(k) + " = " + fmtC(d.X[k]), kindText(k)]; });
+        tipOn(gyh, function () { return ["ŷ" + sub(k) + " = " + fmtC(d.Yh[k]), kindText(k)]; });
+        var gf = el("g", {}, B);
+        cellBg(gf, b.f + s / 2, cy(L, k), s);
+        var glf = realGlyph(gf, b.f + s / 2, cy(L, k), s, "bar-flash", big);
+        els.yf.push({ glyph: glf });
+        tipOn(gf, function () { return ["y" + sub(k) + " = " + fmtNum(d.yF[k]) + " (" + S().flashY + ")", S().naiveY + ": " + fmtNum(d.yN[k])]; });
+      })(t);
+    }
+
+    // multiplication tokens
+    var q = T <= 2 ? 16 : T <= 4 ? 14 : T <= 8 ? 10 : 7;
+    var gap = T >= 16 ? 2 : 3;
+    var nt = $("naiveTokens"), ft = $("flashTokens");
+    [nt, ft].forEach(function (box) { box.style.setProperty("--tq", q + "px"); box.style.setProperty("--tg", gap + "px"); box.textContent = ""; });
+    nt.style.gridTemplateColumns = "repeat(" + T + ", " + q + "px)";
+    els.naiveTok = [];
+    for (t = 0; t < T; t++) {
+      for (c = 0; c < T; c++) {
+        (function (t) {
+          var tk = document.createElement("span");
+          tk.className = "tok";
+          nt.appendChild(tk);
+          els.naiveTok.push(tk);
+          tk.addEventListener("pointermove", function (e) { showTip([S().tokNaive(t, T)], e.clientX, e.clientY); });
+          tk.addEventListener("pointerleave", hideTip);
+        })(t);
+      }
+    }
+    els.flashTok = [];
+    for (k = 0; k < T; k++) {
+      (function (k) {
+        var r = document.createElement("div");
+        r.className = "frow";
+        if (T <= 8) {
+          var kl = document.createElement("span");
+          kl.className = "klabel";
+          kl.textContent = "k = " + k;
+          r.appendChild(kl);
+        }
+        for (var i = 0; i < cost(k); i++) {
+          var tk = document.createElement("span");
+          tk.className = "tok";
+          tk._k = k;
+          r.appendChild(tk);
+          els.flashTok.push(tk);
+        }
+        r.addEventListener("pointermove", function (e) {
+          var line = isMirror(k) ? S().tokFree(k, T - k) : isReal(k) ? S().tokReal(k) : S().tokComplex(k);
+          showTip([line], e.clientX, e.clientY);
+        });
+        r.addEventListener("pointerleave", hideTip);
+        ft.appendChild(r);
+      })(k);
+    }
+    $("svgA").setAttribute("aria-label", S().capA.join(" · "));
+    $("svgB").setAttribute("aria-label", S().capB.join(" · "));
+  }
+
+  function kindText(k) {
+    if (isMirror(k) && T > 2) return S().kindMirror(T - k);
+    return isReal(k) ? S().kindReal : S().kindComplex;
+  }
+  function highlightJ(j, on) {
+    els.wCells.forEach(function (row) {
+      row.forEach(function (c) { if (c.j === j) c.bg.classList.toggle("same", on); });
+    });
+  }
+  function setHi(rect, on, x, y, w, h) {
+    rect.setAttribute("opacity", on ? 1 : 0);
+    if (on) { rect.setAttribute("x", x); rect.setAttribute("y", y); rect.setAttribute("width", w); rect.setAttribute("height", h); }
+  }
+
+  // ---------------------------------------------------------------- draw (tau in [0, 5])
+  function draw() {
+    if (!els) return;
+    var d = data, L = els.L, s = L.s;
+    // step 1: rows of W · x
+    var rowsA = tau >= 1 ? T : Math.max(0, Math.floor(tau * T + 1e-9));
+    var activeA = tau < 1 ? Math.min(T - 1, rowsA) : -1;
+    setHi(els.hiA1, activeA >= 0, L.A.mat - 3, L.top + activeA * s, T * s + 6, s);
+    setHi(els.hiA2, activeA >= 0, L.A.y - 3, L.top + activeA * s, s + 6, s);
+    els.yCells.forEach(function (c, t) { c.glyph.set(d.yN[t], els.vmaxY, t < rowsA ? 1 : 0, t < rowsA); });
+
+    // step 2: change of basis
+    $("svgB").style.opacity = tau <= 1 ? 0.3 : 0.3 + 0.7 * clamp01((tau - 1) / 0.3);
+    var diagP = clamp01((tau - 1) / 0.75), specP = clamp01((tau - 1.2) / 0.6);
+    els.dCells.forEach(function (row, t) {
+      row.forEach(function (c, cc) {
+        c.copy.g.setAttribute("opacity", 1 - diagP);
+        if (t === cc) c.ph.set(d.Wh[t], els.zmaxW, specP);
+        else if (c.zero) c.zero.setAttribute("opacity", 0.9 * diagP);
+      });
+    });
+    els.xh.forEach(function (c, k) { c.ph.set(d.X[k], els.zmaxX, specP); });
+
+    // step 3: one product per frequency
+    var rowsB = tau >= 3 ? T : tau < 2 ? 0 : Math.floor((tau - 2) * T + 1e-9);
+    var activeB = tau >= 2 && tau < 3 ? Math.min(T - 1, rowsB) : -1;
+    setHi(els.hiB1, activeB >= 0, L.B.mat - 3, L.top + activeB * s, T * s + 6, s);
+    setHi(els.hiB2, activeB >= 0, L.B.x - 3, L.top + activeB * s, s + 6, s);
+    setHi(els.hiB3, activeB >= 0, L.B.y - 3, L.top + activeB * s, s + 6, s);
+    els.yh.forEach(function (c, k) { c.ph.set(d.Yh[k], els.zmaxY, k < rowsB ? 1 : 0); });
+
+    // step 4: conjugate symmetry
+    var cP = T > 2 ? clamp01((tau - 3) / 0.6) : 0;
+    for (var k = 0; k < T; k++) {
+      var op = isMirror(k) ? 1 - 0.62 * cP : 1;
+      els.dCells[k][k].ph.g.setAttribute("opacity", op);
+      els.xh[k].g.setAttribute("opacity", op);
+      els.yh[k].g.setAttribute("opacity", op);
+    }
+    els.arcs.forEach(function (arc) { arc.setAttribute("opacity", cP); });
+
+    // step 5: inverse DFT
+    var fP = clamp01((tau - 4) / 0.6);
+    els.yf.forEach(function (c, t) { c.glyph.set(d.yF[t], els.vmaxY, fP, fP >= 1); });
+    els.idft.setAttribute("opacity", 0.3 + 0.7 * fP);
+
+    // tokens and counts
+    els.naiveTok.forEach(function (tk, i) { tk.classList.toggle("on", Math.floor(i / T) < rowsA); });
+    var freeOn = T > 2 && tau >= 3.35;
+    els.flashTok.forEach(function (tk) {
+      var free = freeOn && isMirror(tk._k);
+      tk.classList.toggle("on", tk._k < rowsB && !free);
+      tk.classList.toggle("free", free);
+    });
+    $("naiveCount").textContent = String(rowsA * T);
+    var fc = null;
+    if (step >= 3) {
+      fc = 0;
+      for (k = 0; k < rowsB; k++) if (!(freeOn && isMirror(k))) fc += cost(k);
+    }
+    $("flashCount").textContent = fc === null ? "–" : String(fc);
+    var showSp = tau >= 4.35;
+    $("speedup").textContent = spText(T) + "×";
+    $("speedup").classList.toggle("pending", !showSp);
+    $("match").textContent = tau >= 4.7 ? (d.diff === 0 ? S().matchExact : S().match(fmtSci(d.diff))) : "";
+  }
+
+  // ---------------------------------------------------------------- steps & playback
+  function updateStepText() {
+    var st = S().steps[step - 1];
+    $("stepKicker").textContent = S().kicker(step);
+    $("stepTitle").textContent = st.title;
+    $("stepBody").innerHTML = st.body(T);        // trusted, static strings with <sub>
+    $("stepFormula").innerHTML = st.formula(T);
+    $("prevBtn").disabled = step === 1;
+    $("nextBtn").disabled = step === 5;
+    document.querySelectorAll(".dot").forEach(function (b, i) {
+      if (i + 1 === step) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+    });
+  }
+  function goStep(n, animate) {
+    step = Math.max(1, Math.min(5, n));
+    cancelAnimationFrame(raf);
+    clearTimeout(playTimer);
+    updateStepText();
+    if (!animate || reduceMotion) { tau = step; draw(); stepDone(); return; }
+    var from = step - 1, dur = STEP_MS[step], t0 = performance.now();
+    var linear = step === 1 || step === 3;
+    tau = from;
+    draw();
+    function tick(now) {
+      var p = clamp01((now - t0) / dur);
+      tau = from + (linear ? p : ease(p));
+      draw();
+      if (p < 1) raf = requestAnimationFrame(tick); else stepDone();
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  function stepDone() {
+    if (!playing) return;
+    if (step >= 5) { setPlaying(false); return; }
+    playTimer = setTimeout(function () { goStep(step + 1, true); }, reduceMotion ? READ_MS * 1.3 : READ_MS);
+  }
+  function setPlaying(on) {
+    playing = on;
+    $("playBtn").textContent = on ? S().pause : S().play;
+    if (!on) clearTimeout(playTimer);
+  }
+  $("playBtn").addEventListener("click", function () {
+    if (playing) { setPlaying(false); return; }
+    setPlaying(true);
+    goStep(step >= 5 ? 1 : step + 1, true);
+  });
+  $("prevBtn").addEventListener("click", function () { setPlaying(false); goStep(step - 1, true); });
+  $("nextBtn").addEventListener("click", function () { setPlaying(false); goStep(step + 1, true); });
+  $("shuffleBtn").addEventListener("click", function () {
+    data = compute(randVec(T), randVec(T));
+    build();
+    goStep(step, true);
+  });
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target && e.target.tagName) || "";
+    if (/INPUT|TEXTAREA|SELECT/.test(tag)) return;
+    if (e.key === "ArrowRight" && step < 5) { setPlaying(false); goStep(step + 1, true); }
+    if (e.key === "ArrowLeft" && step > 1) { setPlaying(false); goStep(step - 1, true); }
+  });
+
+  function buildDots() {
+    var box = $("dots");
+    box.textContent = "";
+    S().steps.forEach(function (st, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "dot";
+      b.textContent = String(i + 1);
+      b.title = st.title;
+      b.setAttribute("aria-label", S().stepAria(i + 1, st.title));
+      b.addEventListener("click", function () { setPlaying(false); goStep(i + 1, true); });
+      box.appendChild(b);
+    });
+  }
+  function buildTSeg() {
+    var seg = $("tSeg");
+    seg.textContent = "";
+    TS.forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(t === T));
+      b.setAttribute("aria-label", S().tAria(t));
+      b.textContent = t === 4 ? "4 · p4" : String(t);
+      b.addEventListener("click", function () { setT(t); });
+      seg.appendChild(b);
+    });
+  }
+  function setT(t) {
+    if (t === T) return;
+    T = t;
+    data = compute(randVec(T), randVec(T));
+    buildTSeg();
+    applyCaptions();
+    buildLegend();
+    build();
+    renderScaling();
+    buildScaleTable();
+    goStep(step, true);
+  }
+
+  // ---------------------------------------------------------------- scaling chart
+  function renderScaling() {
+    var box = $("scaling");
+    var W = Math.max(300, box.clientWidth || 640), H = 250;
+    var m = { l: 40, r: 24, t: 14, b: 44 };
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var xT = function (t) { return m.l + ((t - 2) / 14) * pw; };
+    var yV = function (v) { return m.t + (1 - v / 9) * ph; };
+    box.textContent = "";
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "group", "aria-label": S().scaleTitle }, box);
+    [0, 3, 6, 9].forEach(function (v) {
+      el("line", { x1: m.l, x2: m.l + pw, y1: yV(v), y2: yV(v), "class": v === 0 ? "ax-base" : "ax-grid", "shape-rendering": "crispEdges" }, svg);
+      label(svg, m.l - 8, yV(v) + 4, v + "×", "ax-label", { "text-anchor": "end" });
+    });
+    for (var t = 2; t <= 16; t += 2) label(svg, xT(t), m.t + ph + 18, String(t), "ax-label", { "text-anchor": "middle" });
+    label(svg, m.l + pw / 2, H - 6, S().axisX, "ax-label", { "text-anchor": "middle" });
+
+    var pts = [];
+    for (t = 2; t <= 16; t += 2) pts.push(xT(t).toFixed(1) + "," + yV(sp(t)).toFixed(1));
+    var cross = el("line", { x1: 0, x2: 0, y1: m.t, y2: m.t + ph, "class": "crosshair", opacity: 0, "pointer-events": "none" }, svg);
+    el("path", { d: "M" + pts.join("L"), "class": "line-accent" }, svg);
+    var hit = el("rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "transparent" }, svg);
+
+    // measured marker at T = 4
+    el("circle", { cx: xT(4), cy: yV(MEASURED), r: 5, "class": "dot-measured", "pointer-events": "none" }, svg);
+    label(svg, xT(4) + 10, yV(MEASURED) + 16, S().measuredLabel, "lbl-2", { "pointer-events": "none" });
+
+    TS.forEach(function (tt) {
+      var g = el("g", { "class": "pt", tabindex: 0, role: "button", "aria-label": S().tAria(tt) + ": " + spText(tt) + "×" }, svg);
+      el("circle", { cx: xT(tt), cy: yV(sp(tt)), r: 14, "class": "pt-ring" }, g);
+      el("circle", { cx: xT(tt), cy: yV(sp(tt)), r: tt === T ? 6 : 4, "class": "dot-accent" }, g);
+      g.addEventListener("click", function () { setT(tt); });
+      g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setT(tt); } });
+      g.addEventListener("pointermove", function (e) { showChartTip(tt, e.clientX, e.clientY); cross.setAttribute("opacity", 0); });
+      g.addEventListener("pointerleave", hideTip);
+    });
+    var sel = S().selLabel(spText(T), T);
+    var right = T >= 12;
+    label(svg, xT(T) + (right ? -12 : 12), yV(sp(T)) - 10, sel, "lbl", { "text-anchor": right ? "end" : "start", "pointer-events": "none" });
+
+    function nearestT(evt) {
+      var r = svg.getBoundingClientRect();
+      var px = (evt.clientX - r.left) * (W / r.width);
+      var tt = Math.round(((px - m.l) / pw) * 7) * 2 + 2;
+      return Math.max(2, Math.min(16, tt));
+    }
+    hit.addEventListener("pointermove", function (e) {
+      var tt = nearestT(e);
+      cross.setAttribute("x1", xT(tt)); cross.setAttribute("x2", xT(tt)); cross.setAttribute("opacity", 1);
+      showChartTip(tt, e.clientX, e.clientY);
+    });
+    hit.addEventListener("pointerleave", function () { cross.setAttribute("opacity", 0); hideTip(); });
+    hit.addEventListener("click", function (e) { var tt = nearestT(e); if (TS.indexOf(tt) >= 0) setT(tt); });
+  }
+  function showChartTip(t, cx, cy) {
+    var lines = [spText(t) + "×", S().chartTip(t)];
+    if (t === 4) lines.push(S().legMeasured + ": " + MEASURED.toFixed(1) + "×");
+    showTip(lines, cx, cy);
+  }
+  function buildChartLegend() {
+    var box = $("chartLegend");
+    box.textContent = "";
+    [["line", S().legTheory], ["ring", S().legMeasured]].forEach(function (it) {
+      var span = document.createElement("span");
+      span.className = "lg";
+      var svg = el("svg", { width: 18, height: 12, "aria-hidden": "true" }, span);
+      if (it[0] === "line") el("line", { x1: 1, x2: 17, y1: 6, y2: 6, "class": "line-accent" }, svg);
+      else el("circle", { cx: 9, cy: 6, r: 4, "class": "dot-measured" }, svg);
+      var t = document.createElement("span");
+      t.textContent = it[1];
+      span.appendChild(t);
+      box.appendChild(span);
+    });
+  }
+  function buildScaleTable() {
+    var tbl = $("scaleTable");
+    tbl.textContent = "";
+    var thead = document.createElement("thead"), tr = document.createElement("tr");
+    S().thead.forEach(function (h) { var th = document.createElement("th"); th.textContent = h; tr.appendChild(th); });
+    thead.appendChild(tr);
+    tbl.appendChild(thead);
+    var tb = document.createElement("tbody");
+    TS.forEach(function (t) {
+      var r = document.createElement("tr");
+      if (t === T) r.className = "sel";
+      [String(t), String(t * t), String(2 * t - 2), spText(t) + "×"].forEach(function (v) {
+        var td = document.createElement("td"); td.textContent = v; r.appendChild(td);
+      });
+      tb.appendChild(r);
+    });
+    tbl.appendChild(tb);
+  }
+
+  // ---------------------------------------------------------------- legend, captions, language, theme
+  function buildLegend() {
+    var box = $("legend");
+    box.textContent = "";
+    function item(draw, text) {
+      var span = document.createElement("span");
+      span.className = "lg";
+      var svg = el("svg", { width: 20, height: 20, viewBox: "0 0 20 20", "aria-hidden": "true" }, span);
+      draw(svg);
+      var t = document.createElement("span");
+      t.textContent = text;
+      span.appendChild(t);
+      box.appendChild(span);
+    }
+    item(function (svg) {
+      el("rect", { x: 1, y: 1, width: 18, height: 18, rx: 4, "class": "cell-bg" }, svg);
+      el("line", { x1: 4, x2: 16, y1: 11, y2: 11, "class": "g-axis" }, svg);
+      el("rect", { x: 8, y: 4, width: 4, height: 7, rx: 1, "class": "bar-naive" }, svg);
+    }, S().lgReal);
+    item(function (svg) {
+      el("circle", { cx: 10, cy: 10, r: 8, "class": "ph-ring" }, svg);
+      el("line", { x1: 10, y1: 10, x2: 15, y2: 5, "class": "ph-arm" }, svg);
+      el("circle", { cx: 15, cy: 5, r: 1.8, "class": "ph-tip" }, svg);
+    }, S().lgComplex);
+    if (T > 2) {
+      item(function (svg) {
+        var g = el("g", { opacity: 0.38 }, svg);
+        el("circle", { cx: 10, cy: 10, r: 8, "class": "ph-ring" }, g);
+        el("line", { x1: 10, y1: 10, x2: 15, y2: 15, "class": "ph-arm" }, g);
+        el("circle", { cx: 15, cy: 15, r: 1.8, "class": "ph-tip" }, g);
+      }, S().lgMirror);
+    }
+  }
+  function applyCaptions() {
+    [["capA", S().capA], ["capB", S().capB]].forEach(function (c) {
+      var fc = $(c[0]);
+      fc.textContent = c[1][0] + " ";
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = "· " + c[1][1];
+      fc.appendChild(tag);
+    });
+    var ct = $("costTitle");
+    ct.textContent = S().costTitle;
+    var per = document.createElement("span");
+    per.textContent = S().costPer;
+    ct.appendChild(per);
+    $("naiveLabel").textContent = S().naive;
+    $("flashLabel").textContent = S().flash;
+    $("speedupLabel").textContent = S().speedupLabel(T);
+    $("prevBtn").setAttribute("aria-label", S().prev);
+    $("nextBtn").setAttribute("aria-label", S().next);
+    $("prevBtn").title = S().prev;
+    $("nextBtn").title = S().next;
+  }
+  function applyTheme() {
+    var root = document.documentElement;
+    if (theme !== "auto") root.setAttribute("data-theme", theme);
+    else if (hostTheme) root.setAttribute("data-theme", hostTheme);
+    else root.removeAttribute("data-theme");
+    var name = theme === "auto" ? S().themeAuto : theme === "light" ? S().themeLight : S().themeDark;
+    $("themeBtn").textContent = (theme === "auto" ? "◐" : theme === "light" ? "☀" : "☾") + " " + name;
+    $("themeBtn").setAttribute("aria-label", S().themeAria(name));
+  }
+  $("themeBtn").addEventListener("click", function () {
+    theme = theme === "auto" ? "light" : theme === "light" ? "dark" : "auto";
+    save("feq-theme", theme);
+    applyTheme();
+  });
+  function applyLang() {
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.title = (lang === "zh" ? "加速原理" : "How It Works") + " · Flash EQ-Linear";
+    document.querySelectorAll("[data-i18n]").forEach(function (node) {
+      var v = S()[node.getAttribute("data-i18n")];
+      if (typeof v === "string") node.textContent = v;
+    });
+    document.querySelectorAll("[data-lang]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang));
+    });
+    applyTheme();
+    applyCaptions();
+    buildLegend();
+    buildDots();
+    buildTSeg();
+    buildChartLegend();
+    buildScaleTable();
+    renderScaling();
+    build();
+    updateStepText();
+    setPlaying(playing);
+    draw();
+  }
+  document.querySelectorAll("[data-lang]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      lang = b.getAttribute("data-lang");
+      save("feq-lang", lang);
+      applyLang();
+    });
+  });
+
+  // ---------------------------------------------------------------- boot
+  var resizeTimer = 0;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderScaling, 120);
+  });
+  applyLang();
+  tau = 0;
+  draw();
+  // ?step=N opens the page on the finished state of step N, without autoplay.
+  var initStep = Math.max(0, Math.min(5, parseInt(params.get("step"), 10) || 0));
+  if (initStep) { started = true; goStep(initStep, false); }
+  function start() {
+    if (started) return;
+    started = true;
+    setPlaying(!reduceMotion);
+    goStep(1, true);
+  }
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) { io.disconnect(); start(); }
+    }, { threshold: 0.35 });
+    io.observe($("stageCard"));
+  } else {
+    start();
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Throughput Race · Flash EQ-Linear</title>
+<meta name="description" content="Replay of the paper's end-to-end inference throughput on an RTX 4090: standard, naive equivariant and Flash EQ-Linear networks race through the same workload.">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --accent: #2a78d6;
+  --accent-wash: rgba(42, 120, 214, 0.10);
+  --btn: #256abf;
+  --btn-hover: #1c5cab;
+  --link: #1c5cab;
+  --base-bar: #898781;
+  --good: #006300;
+  --good-wash: rgba(12, 163, 12, 0.10);
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.06), 0 4px 16px rgba(11, 11, 11, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #262624;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --accent-wash: rgba(57, 135, 229, 0.16);
+    --btn: #256abf;
+    --btn-hover: #2a78d6;
+    --link: #86b6ef;
+    --base-bar: #6b6a64;
+    --good: #0ca30c;
+    --good-wash: rgba(12, 163, 12, 0.14);
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #262624;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --accent: #3987e5;
+  --accent-wash: rgba(57, 135, 229, 0.16);
+  --btn: #256abf;
+  --btn-hover: #2a78d6;
+  --link: #86b6ef;
+  --base-bar: #6b6a64;
+  --good: #0ca30c;
+  --good-wash: rgba(12, 163, 12, 0.14);
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+a { color: var(--link); }
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.topbar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  max-width: 1040px; margin: 0 auto; padding: 14px 16px;
+}
+.brand { font-weight: 700; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
+.brand span { color: var(--muted); font-weight: 500; }
+.nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+.nav a { color: var(--ink-2); text-decoration: none; }
+.nav a:hover { color: var(--ink); text-decoration: underline; }
+.nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.spacer { flex: 1; }
+.toggles { display: flex; gap: 8px; align-items: center; }
+
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button {
+  border: 0; background: transparent; padding: 5px 10px; border-radius: 6px;
+  color: var(--ink-2); cursor: pointer; font-size: 13.5px; white-space: nowrap;
+}
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"], .seg button[aria-checked="true"] {
+  background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--border);
+}
+.icon-btn {
+  border: 0; background: var(--surface-2); color: var(--ink-2); border-radius: 8px;
+  height: 32px; min-width: 32px; padding: 0 10px; cursor: pointer; font-size: 13.5px;
+}
+.icon-btn:hover { color: var(--ink); }
+
+main { max-width: 1040px; margin: 0 auto; padding: 8px 16px 48px; }
+.hero { padding: 20px 0 8px; }
+.eyebrow { margin: 0 0 6px; color: var(--muted); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+h1 { margin: 0 0 10px; font-size: clamp(28px, 5vw, 40px); line-height: 1.15; letter-spacing: -0.02em; }
+.lede { margin: 0; color: var(--ink-2); max-width: 760px; font-size: 16px; }
+h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.01em; }
+.sub { margin: 0 0 16px; color: var(--ink-2); font-size: 14px; }
+
+.card {
+  background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--border), var(--shadow);
+  padding: 22px; margin-top: 20px;
+}
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 12.5px; color: var(--muted); }
+select {
+  appearance: none; -webkit-appearance: none;
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23898781' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;
+  border: 0; border-radius: 8px; padding: 7px 30px 7px 10px; font-size: 14px; min-width: 190px; cursor: pointer;
+}
+.btn {
+  border: 0; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 600; font-size: 14px;
+}
+.btn.primary { background: var(--btn); color: #ffffff; }
+.btn.primary:hover { background: var(--btn-hover); }
+.btn.ghost { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--border); }
+.btn.ghost:hover { color: var(--ink); }
+.btn-row { display: flex; gap: 8px; margin-left: auto; }
+
+.race-meta {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+  margin: 22px 0 6px; padding-top: 16px; border-top: 1px solid var(--grid);
+}
+.clock-label { color: var(--muted); font-size: 13px; margin-right: 8px; }
+.clock { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.playback { color: var(--ink-2); font-size: 13.5px; }
+.workload-note { color: var(--muted); font-size: 13px; margin-left: auto; }
+
+.lanes { display: flex; flex-direction: column; gap: 18px; margin-top: 14px; }
+.lane { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; }
+.lane-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.key { width: 10px; height: 10px; border-radius: 2px; background: var(--base-bar); flex: none; align-self: center; }
+.lane[data-kind="flash"] .key { background: var(--accent); }
+.lane-name { font-weight: 650; }
+.lane[data-kind="flash"] .lane-name { font-weight: 750; }
+.lane-sub { color: var(--muted); font-size: 13px; }
+.lane-stats { text-align: right; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lane-stats strong { color: var(--ink); font-weight: 650; }
+.track {
+  grid-column: 1 / -1; position: relative; height: 18px; border-radius: 0 4px 4px 0;
+  background: var(--surface-2);
+}
+.track::after {
+  content: ""; position: absolute; right: -2px; top: -5px; bottom: -5px; width: 6px;
+  background:
+    linear-gradient(45deg, var(--ink-2) 25%, transparent 25%, transparent 75%, var(--ink-2) 75%) 0 0 / 6px 6px,
+    linear-gradient(45deg, var(--ink-2) 25%, transparent 25%, transparent 75%, var(--ink-2) 75%) 3px 3px / 6px 6px;
+  opacity: 0.55; border-radius: 1px;
+}
+.fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--base-bar); border-radius: 0 4px 4px 0; }
+.lane[data-kind="flash"] .fill { background: var(--accent); }
+.done {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+  background: var(--good-wash); color: var(--good); font-weight: 650; font-size: 12.5px;
+}
+.done[hidden] { display: none; }
+
+.result {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 20px; align-items: center;
+  margin-top: 22px; padding: 16px 18px; border-radius: 12px; background: var(--accent-wash);
+  min-height: 96px; transition: opacity 0.3s ease;
+}
+.result.pending { opacity: 0.45; }
+.hero-figure { font-size: 56px; font-weight: 750; line-height: 1; letter-spacing: -0.03em; }
+.hero-label { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+.result-text p { margin: 0 0 4px; }
+.result-text p + p { color: var(--ink-2); font-size: 14px; }
+
+.glance-wrap { position: relative; }
+#glance svg { display: block; width: 100%; height: auto; overflow: visible; }
+#glance .row-hit { cursor: pointer; }
+#glance .row-hit:focus { outline: none; }
+#glance .row-hit:focus-visible .row-band, #glance .row-hit:hover .row-band { fill: var(--surface-2); }
+#glance .row-hit.selected .row-band { fill: var(--accent-wash); }
+
+.tip {
+  position: fixed; z-index: 10; pointer-events: none; min-width: 180px; max-width: 280px;
+  background: var(--surface); color: var(--ink); border-radius: 10px; padding: 10px 12px;
+  box-shadow: 0 0 0 1px var(--border), 0 8px 24px rgba(0, 0, 0, 0.14); font-size: 13px;
+}
+.tip[hidden] { display: none; }
+.tip-title { color: var(--ink-2); margin-bottom: 6px; }
+.tip-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.tip-key { width: 14px; height: 3px; border-radius: 2px; background: var(--base-bar); flex: none; }
+.tip-key.flash { background: var(--accent); }
+.tip-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tip-name { color: var(--ink-2); }
+.tip-foot { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--grid); color: var(--good); font-weight: 650; }
+
+details.table-view { margin-top: 18px; }
+details.table-view summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
+.table-scroll { overflow-x: auto; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), td.setting, th.setting { text-align: left; }
+th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+td.flash-col { font-weight: 700; }
+
+.notes { margin-top: 26px; color: var(--muted); font-size: 13px; max-width: 820px; }
+.notes p { margin: 0 0 8px; }
+.next-link { display: inline-block; margin-top: 8px; font-weight: 600; }
+
+@media (max-width: 640px) {
+  .card { padding: 16px; }
+  .btn-row { margin-left: 0; width: 100%; }
+  .btn-row .btn { flex: 1; }
+  select { min-width: 0; width: 100%; }
+  .field { flex: 1 1 100%; }
+  .seg { flex-wrap: wrap; }
+  .hero-figure { font-size: 48px; }
+  .result { grid-template-columns: 1fr; }
+  .workload-note { margin-left: 0; width: 100%; }
+  .lane { grid-template-columns: 1fr; }
+  .lane-stats { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html">Flash EQ-Linear <span>· demo</span></a>
+  <nav class="nav" aria-label="Demos">
+    <a href="index.html" data-i18n="navHub">All demos</a>
+    <a href="s1_throughput_race.html" aria-current="page" data-i18n="navS1">Throughput race</a>
+    <a href="s2_principle.html" data-i18n="navS2">How it works</a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="toggles">
+    <div class="seg" role="group" aria-label="Language">
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    </div>
+    <button type="button" class="icon-btn" id="themeBtn" aria-label="Color theme"></button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow" data-i18n="eyebrow">Demo S1 · measured on NVIDIA RTX 4090</p>
+    <h1 data-i18n="title">Throughput race</h1>
+    <p class="lede" data-i18n="lede">Same network, same GPU, same workload. Flash EQ-Linear replaces the equivariant linear layers with a Fourier-domain kernel that does fewer multiplications and gives mathematically identical outputs.</p>
+  </section>
+
+  <section class="card" id="raceCard" aria-labelledby="raceTitle">
+    <h2 id="raceTitle" class="visually-hidden" data-i18n="raceTitle" hidden>Race</h2>
+    <div class="controls">
+      <label class="field">
+        <span class="field-label" data-i18n="modelLabel">Network</span>
+        <select id="modelSelect"></select>
+      </label>
+      <div class="field">
+        <span class="field-label" id="workloadLabel" data-i18n="workloadLabel">Workload</span>
+        <div class="seg" id="workloadSeg" role="radiogroup" aria-labelledby="workloadLabel"></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="startBtn" data-i18n="start">Start race</button>
+        <button type="button" class="btn ghost" id="skipBtn" data-i18n="skip">Skip to result</button>
+      </div>
+    </div>
+
+    <div class="race-meta">
+      <div><span class="clock-label" data-i18n="gpuTime">GPU time</span><span class="clock" id="clock">0:00.00</span></div>
+      <div class="playback" id="playback"></div>
+      <div class="workload-note" id="settingNote"></div>
+    </div>
+
+    <div class="lanes" id="lanes"></div>
+
+    <div class="result pending" id="result" aria-live="polite">
+      <div>
+        <div class="hero-figure" id="heroFigure">–</div>
+        <div class="hero-label" id="heroLabel"></div>
+      </div>
+      <div class="result-text">
+        <p id="resultLine1"></p>
+        <p id="resultLine2"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="glanceTitle">
+    <h2 id="glanceTitle" data-i18n="glanceTitle">Speedup across the paper's networks</h2>
+    <p class="sub" data-i18n="glanceSub">End-to-end inference throughput ratio. Select a row to race that network.</p>
+    <div class="glance-wrap" id="glance"></div>
+    <details class="table-view">
+      <summary data-i18n="tableToggle">Show the data table</summary>
+      <div class="table-scroll"><table id="dataTable"></table></div>
+    </details>
+  </section>
+
+  <footer class="notes">
+    <p data-i18n="note1">Numbers from paper Tables 3 and 4: end-to-end inference throughput on one NVIDIA RTX 4090 (24 GB). Table 3 speedups are relative to the standard ViT; Table 4 speedups are relative to the naive equivariant implementation.</p>
+    <p data-i18n="note2">Settings: ViT, Swin and VMamba use 224 × 224 inputs at batch 128. EQ-SwinIR-LIIF and EQ-SwinIR-LTE use 48 × 48 low-resolution patches (×2 output) at batch 1. Top-1 accuracy is on ImageNet-100.</p>
+    <p data-i18n="note3">The race is a replay of those measurements: each lane advances at its measured throughput (time = images ÷ throughput). Nothing is benchmarked in your browser.</p>
+    <a class="next-link" href="s2_principle.html" data-i18n="nextLink">Why is it faster? See the principle step by step →</a>
+  </footer>
+</main>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------- data
+  // Paper Table 3 (ViT family, images/s) and Table 4 (other networks, images/s).
+  var MODELS = [
+    { id: "vit-s-fp32", table: 3, family: "cls", name: "ViT-S", prec: "FP32", speedup: 1.4, lanes: [
+      { kind: "std", label: "ViT-S", thr: 1658, params: 33.8, top1: 76.5 },
+      { kind: "naive", label: "Naive EQ-ViT-S", thr: 1656, params: 8.4, top1: 78.2 },
+      { kind: "flash", label: "Flash EQ-ViT-S", thr: 2332, params: 8.4, top1: 78.2 } ] },
+    { id: "vit-b-fp32", table: 3, family: "cls", name: "ViT-B", prec: "FP32", speedup: 1.5, lanes: [
+      { kind: "std", label: "ViT-B", thr: 881, params: 85.9, top1: 77.1 },
+      { kind: "naive", label: "Naive EQ-ViT-B", thr: 886, params: 21.4, top1: 80.1 },
+      { kind: "flash", label: "Flash EQ-ViT-B", thr: 1309, params: 21.4, top1: 80.1 } ] },
+    { id: "vit-l-fp32", table: 3, family: "cls", name: "ViT-L", prec: "FP32", speedup: 1.6, lanes: [
+      { kind: "std", label: "ViT-L", thr: 269, params: 303.4, top1: 78.4 },
+      { kind: "naive", label: "Naive EQ-ViT-L", thr: 268, params: 75.8, top1: 80.6 },
+      { kind: "flash", label: "Flash EQ-ViT-L", thr: 424, params: 75.8, top1: 80.6 } ] },
+    { id: "vit-h-fp32", table: 3, family: "cls", name: "ViT-H", prec: "FP32", speedup: 1.7, lanes: [
+      { kind: "std", label: "ViT-H", thr: 139, params: 631.0, top1: 81.3 },
+      { kind: "naive", label: "Naive EQ-ViT-H", thr: 139, params: 157.7, top1: 81.5 },
+      { kind: "flash", label: "Flash EQ-ViT-H", thr: 232, params: 157.7, top1: 81.5 } ] },
+    { id: "vit-l-fp16", table: 3, family: "cls", name: "ViT-L", prec: "FP16", speedup: 1.3, lanes: [
+      { kind: "std", label: "ViT-L", thr: 795, params: 303.4, top1: 78.4 },
+      { kind: "naive", label: "Naive EQ-ViT-L", thr: 792, params: 75.8, top1: 80.6 },
+      { kind: "flash", label: "Flash EQ-ViT-L", thr: 996, params: 75.8, top1: 80.6 } ] },
+    { id: "vit-h-fp16", table: 3, family: "cls", name: "ViT-H", prec: "FP16", speedup: 1.3, lanes: [
+      { kind: "std", label: "ViT-H", thr: 420, params: 631.0, top1: 81.3 },
+      { kind: "naive", label: "Naive EQ-ViT-H", thr: 418, params: 157.7, top1: 81.5 },
+      { kind: "flash", label: "Flash EQ-ViT-H", thr: 555, params: 157.7, top1: 81.5 } ] },
+    { id: "swin-h", table: 4, family: "cls", name: "EQ-Swin-H", prec: "FP32", speedup: 1.6, lanes: [
+      { kind: "naive", label: "Naive EQ-Swin-H", thr: 135 },
+      { kind: "flash", label: "Flash EQ-Swin-H", thr: 213 } ] },
+    { id: "vmamba-h", table: 4, family: "cls", name: "EQ-VMamba-H", prec: "FP32", speedup: 1.4, lanes: [
+      { kind: "naive", label: "Naive EQ-VMamba-H", thr: 129 },
+      { kind: "flash", label: "Flash EQ-VMamba-H", thr: 184 } ] },
+    { id: "swinir-liif", table: 4, family: "sr", name: "EQ-SwinIR-LIIF", prec: "FP32", speedup: 1.3, lanes: [
+      { kind: "naive", label: "Naive EQ-SwinIR-LIIF", thr: 105 },
+      { kind: "flash", label: "Flash EQ-SwinIR-LIIF", thr: 132 } ] },
+    { id: "swinir-lte", table: 4, family: "sr", name: "EQ-SwinIR-LTE", prec: "FP32", speedup: 1.3, lanes: [
+      { kind: "naive", label: "Naive EQ-SwinIR-LTE", thr: 96 },
+      { kind: "flash", label: "Flash EQ-SwinIR-LTE", thr: 121 } ] }
+  ];
+  var WORKLOADS = {
+    cls: [10000, 50000, 1281167],
+    sr: [10000, 100000, 1000000]
+  };
+  var BATCH = { cls: 128, sr: 1 };
+  var TARGET_SECONDS = 8; // the slowest lane takes about this long on screen
+
+  // ---------------------------------------------------------------- strings
+  var STR = {
+    en: {
+      navHub: "All demos", navS1: "Throughput race", navS2: "How it works",
+      eyebrow: "Demo S1 · measured on NVIDIA RTX 4090",
+      title: "Throughput race",
+      lede: "Same network, same GPU, same workload. Flash EQ-Linear replaces the equivariant linear layers with a Fourier-domain kernel that does fewer multiplications and gives mathematically identical outputs.",
+      raceTitle: "Race", modelLabel: "Network", workloadLabel: "Workload",
+      start: "Start race", replay: "Race again", skip: "Skip to result", gpuTime: "GPU time",
+      glanceTitle: "Speedup across the paper's networks",
+      glanceSub: "End-to-end inference throughput ratio. Select a row to race that network.",
+      tableToggle: "Show the data table",
+      note1: "Numbers from paper Tables 3 and 4: end-to-end inference throughput on one NVIDIA RTX 4090 (24 GB). Table 3 speedups are relative to the standard ViT; Table 4 speedups are relative to the naive equivariant implementation.",
+      note2: "Settings: ViT, Swin and VMamba use 224 × 224 inputs at batch 128. EQ-SwinIR-LIIF and EQ-SwinIR-LTE use 48 × 48 low-resolution patches (×2 output) at batch 1. Top-1 accuracy is on ImageNet-100.",
+      note3: "The race is a replay of those measurements: each lane advances at its measured throughput (time = images ÷ throughput). Nothing is benchmarked in your browser.",
+      nextLink: "Why is it faster? See the principle step by step →",
+      groupT3: "Table 3 · Flash EQ-ViT vs. standard ViT",
+      groupT4: "Table 4 · Flash vs. naive equivariant networks",
+      optT3: "Table 3 · ViT", optT4: "Table 4 · other networks",
+      kind: { std: "standard, non-equivariant", naive: "equivariant, naive layers", flash: "equivariant, Flash EQ-Linear" },
+      params: function (p) { return p.toFixed(1) + "M params"; },
+      top1: function (t) { return t.toFixed(1) + "% top-1"; },
+      perSec: function (u) { return u === "img" ? "img/s" : "patches/s"; },
+      unit: function (fam) { return fam === "sr" ? "patches" : "images"; },
+      workload: function (fam, n) {
+        if (fam === "sr") { return n >= 1e6 ? "1M patches" : (n / 1000) + "K patches"; }
+        if (n === 50000) return "50K · ImageNet val";
+        if (n === 1281167) return "1.28M · ImageNet train";
+        return (n / 1000) + "K images";
+      },
+      setting: function (fam) { return fam === "sr" ? "48 × 48 LR → ×2, batch 1" : "224 × 224, batch 128"; },
+      realtime: "Playing in real time",
+      fastfwd: function (f) { return "Fast-forward ×" + fmtFactor(f); },
+      heroLabel: function (base) { return "throughput vs. " + base; },
+      pending: "Press start: every lane processes the same workload.",
+      running: "Racing…",
+      line1: function (flash, n, unit, t, saved, base) {
+        return flash + " finished " + n + " " + unit + " in " + t + ", " + saved + " sooner than " + base + ".";
+      },
+      line2: function (base, pct) { return "When Flash crossed the line, " + base + " had finished " + pct + "%."; },
+      done: "done",
+      dur: function (s) {
+        if (s < 60) return s.toFixed(s < 1 ? 2 : 1) + " s";
+        var r = Math.round(s);
+        if (r < 3600) return Math.floor(r / 60) + " min " + (r % 60) + " s";
+        r = Math.round(s / 60);
+        return Math.floor(r / 60) + " h " + (r % 60) + " min";
+      },
+      speedupWord: "speedup",
+      thead: ["Table", "Network", "Precision", "Standard", "Naive EQ", "Flash EQ", "Speedup", "Setting"],
+      axisBaseline: "1× baseline",
+      themeAuto: "Auto", themeLight: "Light", themeDark: "Dark",
+      themeAria: function (m) { return "Color theme: " + m; },
+      rowAria: function (m) { return m.name + " " + m.prec + ", " + m.speedup.toFixed(1) + "× speedup. Race this network."; }
+    },
+    zh: {
+      navHub: "全部演示", navS1: "吞吐量竞速", navS2: "加速原理",
+      eyebrow: "演示 S1 · NVIDIA RTX 4090 实测",
+      title: "吞吐量竞速",
+      lede: "同一个网络、同一块 GPU、同样的任务量。Flash EQ-Linear 把等变线性层换成傅里叶域的内核：乘法更少，输出在数学上完全一致。",
+      raceTitle: "竞速", modelLabel: "网络", workloadLabel: "任务量",
+      start: "开始竞速", replay: "再跑一次", skip: "直接看结果", gpuTime: "GPU 用时",
+      glanceTitle: "论文中各网络的加速比",
+      glanceSub: "端到端推理吞吐量之比。点击某一行即可让该网络参赛。",
+      tableToggle: "查看数据表",
+      note1: "数据来自论文表 3 和表 4：单张 NVIDIA RTX 4090（24 GB）上的端到端推理吞吐量。表 3 的加速比相对标准 ViT，表 4 的加速比相对朴素等变实现。",
+      note2: "设置：ViT、Swin、VMamba 输入 224 × 224，batch 128；EQ-SwinIR-LIIF 与 EQ-SwinIR-LTE 输入 48 × 48 低分辨率图块（×2 输出），batch 1。Top-1 为 ImageNet-100 上的精度。",
+      note3: "竞速是对上述实测结果的回放：每条赛道按各自实测吞吐量前进（用时 = 图像数 ÷ 吞吐量），并不在你的浏览器里跑模型。",
+      nextLink: "为什么更快？逐步看加速原理 →",
+      groupT3: "表 3 · Flash EQ-ViT 对比标准 ViT",
+      groupT4: "表 4 · Flash 对比朴素等变网络",
+      optT3: "表 3 · ViT", optT4: "表 4 · 其他网络",
+      kind: { std: "标准 ViT（非等变）", naive: "等变网络，朴素实现", flash: "等变网络，Flash EQ-Linear" },
+      params: function (p) { return "参数 " + p.toFixed(1) + "M"; },
+      top1: function (t) { return "Top-1 " + t.toFixed(1) + "%"; },
+      perSec: function (u) { return u === "img" ? "张/秒" : "块/秒"; },
+      unit: function (fam) { return fam === "sr" ? "个图块" : "张图像"; },
+      workload: function (fam, n) {
+        if (fam === "sr") { return n >= 1e6 ? "100 万图块" : (n / 10000) + " 万图块"; }
+        if (n === 50000) return "5 万 · ImageNet 验证集";
+        if (n === 1281167) return "128 万 · ImageNet 训练集";
+        return (n / 10000) + " 万张";
+      },
+      setting: function (fam) { return fam === "sr" ? "48 × 48 低分辨率 → ×2，batch 1" : "224 × 224，batch 128"; },
+      realtime: "按真实速度播放",
+      fastfwd: function (f) { return "快进 ×" + fmtFactor(f); },
+      heroLabel: function (base) { return "相对 " + base + " 的吞吐量"; },
+      pending: "点击开始：每条赛道处理同样的任务量。",
+      running: "竞速中…",
+      line1: function (flash, n, unit, t, saved, base) {
+        return flash + " 用 " + t + " 处理完 " + n + " " + unit + "，比 " + base + " 快 " + saved + "。";
+      },
+      line2: function (base, pct) { return "Flash 冲线时，" + base + " 只完成了 " + pct + "%。"; },
+      done: "完成",
+      dur: function (s) {
+        if (s < 60) return s.toFixed(s < 1 ? 2 : 1) + " 秒";
+        var r = Math.round(s);
+        if (r < 3600) return Math.floor(r / 60) + " 分 " + (r % 60) + " 秒";
+        r = Math.round(s / 60);
+        return Math.floor(r / 60) + " 小时 " + (r % 60) + " 分";
+      },
+      speedupWord: "加速",
+      thead: ["表", "网络", "精度", "标准", "朴素等变", "Flash 等变", "加速比", "设置"],
+      axisBaseline: "1× 基线",
+      themeAuto: "自动", themeLight: "浅色", themeDark: "深色",
+      themeAria: function (m) { return "配色：" + m; },
+      rowAria: function (m) { return m.name + " " + m.prec + "，加速 " + m.speedup.toFixed(1) + "×。让该网络参赛。"; }
+    }
+  };
+
+  function fmtFactor(f) { return f >= 10 ? Math.round(f).toLocaleString("en-US") : f.toFixed(1); }
+  function fmtInt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function clockText(s) {
+    var m = Math.floor(s / 60), sec = s - 60 * m;
+    if (m >= 60) {
+      var h = Math.floor(m / 60); m -= 60 * h;
+      return h + ":" + String(m).padStart(2, "0") + ":" + String(Math.floor(sec)).padStart(2, "0");
+    }
+    return m + ":" + (sec < 10 ? "0" : "") + sec.toFixed(2);
+  }
+
+  // ---------------------------------------------------------------- storage (best effort)
+  function load(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
+  function save(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { /* ignore */ } }
+
+  // ---------------------------------------------------------------- state
+  var params = new URLSearchParams(location.search);
+  var lang = params.get("lang") || load("feq-lang") || ((navigator.language || "").toLowerCase().indexOf("zh") === 0 ? "zh" : "en");
+  if (!STR[lang]) lang = "en";
+  var theme = load("feq-theme") || "auto";
+  var hostTheme = document.documentElement.getAttribute("data-theme");
+  var model = MODELS[3];
+  var workloadIdx = 1;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var raf = 0, raceStart = 0, raceState = "idle", simNow = 0;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var T = function () { return STR[lang]; };
+
+  // ---------------------------------------------------------------- theme
+  function applyTheme() {
+    var root = document.documentElement;
+    if (theme !== "auto") root.setAttribute("data-theme", theme);
+    else if (hostTheme) root.setAttribute("data-theme", hostTheme);
+    else root.removeAttribute("data-theme");
+    var label = theme === "auto" ? T().themeAuto : theme === "light" ? T().themeLight : T().themeDark;
+    var icon = theme === "auto" ? "◐" : theme === "light" ? "☀" : "☾";
+    $("themeBtn").textContent = icon + " " + label;
+    $("themeBtn").setAttribute("aria-label", T().themeAria(label));
+  }
+  $("themeBtn").addEventListener("click", function () {
+    theme = theme === "auto" ? "light" : theme === "light" ? "dark" : "auto";
+    save("feq-theme", theme);
+    applyTheme();
+    renderGlance();
+  });
+
+  // ---------------------------------------------------------------- language
+  function applyLang() {
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      var v = T()[el.getAttribute("data-i18n")];
+      if (typeof v === "string") el.textContent = v;
+    });
+    document.querySelectorAll("[data-lang]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang));
+    });
+    document.title = (lang === "zh" ? "吞吐量竞速" : "Throughput Race") + " · Flash EQ-Linear";
+    applyTheme();
+    buildModelSelect();
+    buildWorkloads();
+    buildLanes();
+    renderGlance();
+    buildTable();
+    if (raceState === "done") showResult(); else if (raceState === "idle") showPending();
+    $("startBtn").textContent = raceState === "idle" ? T().start : T().replay;
+  }
+  document.querySelectorAll("[data-lang]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      lang = b.getAttribute("data-lang");
+      save("feq-lang", lang);
+      applyLang();
+    });
+  });
+
+  // ---------------------------------------------------------------- controls
+  function modelTitle(m) { return m.name + " · " + m.prec; }
+  function buildModelSelect() {
+    var sel = $("modelSelect");
+    sel.textContent = "";
+    [[3, T().optT3], [4, T().optT4]].forEach(function (g) {
+      var og = document.createElement("optgroup");
+      og.label = g[1];
+      MODELS.filter(function (m) { return m.table === g[0]; }).forEach(function (m) {
+        var o = document.createElement("option");
+        o.value = m.id;
+        o.textContent = modelTitle(m);
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    sel.value = model.id;
+  }
+  $("modelSelect").addEventListener("change", function (e) {
+    selectModel(e.target.value, true);
+  });
+
+  function buildWorkloads() {
+    var seg = $("workloadSeg");
+    seg.textContent = "";
+    WORKLOADS[model.family].forEach(function (n, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(i === workloadIdx));
+      b.textContent = T().workload(model.family, n);
+      b.addEventListener("click", function () {
+        workloadIdx = i;
+        buildWorkloads();
+        startRace();
+      });
+      seg.appendChild(b);
+    });
+    $("settingNote").textContent = model.prec + " · " + T().setting(model.family);
+  }
+
+  function selectModel(id, autostart) {
+    var m = MODELS.filter(function (x) { return x.id === id; })[0];
+    if (!m) return;
+    model = m;
+    $("modelSelect").value = m.id;
+    buildWorkloads();
+    buildLanes();
+    renderGlance();
+    if (autostart) startRace(); else resetRace();
+  }
+
+  // ---------------------------------------------------------------- lanes
+  var laneEls = [];
+  function laneSub(l) {
+    var parts = [T().kind[l.kind]];
+    if (l.params) parts.push(T().params(l.params));
+    if (l.top1) parts.push(T().top1(l.top1));
+    return parts.join(" · ");
+  }
+  function buildLanes() {
+    var box = $("lanes");
+    box.textContent = "";
+    laneEls = model.lanes.map(function (l) {
+      var lane = document.createElement("div");
+      lane.className = "lane";
+      lane.setAttribute("data-kind", l.kind);
+
+      var head = document.createElement("div");
+      head.className = "lane-head";
+      var key = document.createElement("span"); key.className = "key";
+      var name = document.createElement("span"); name.className = "lane-name"; name.textContent = l.label;
+      var sub = document.createElement("span"); sub.className = "lane-sub"; sub.textContent = laneSub(l);
+      head.appendChild(key); head.appendChild(name); head.appendChild(sub);
+
+      var stats = document.createElement("div");
+      stats.className = "lane-stats";
+      var count = document.createElement("strong");
+      var rate = document.createElement("span");
+      rate.textContent = " · " + fmtInt(l.thr) + " " + T().perSec(model.family === "sr" ? "patch" : "img");
+      var done = document.createElement("span"); done.className = "done"; done.hidden = true;
+      stats.appendChild(count); stats.appendChild(rate); stats.appendChild(done);
+
+      var track = document.createElement("div");
+      track.className = "track";
+      track.setAttribute("role", "progressbar");
+      track.setAttribute("aria-label", l.label);
+      track.setAttribute("aria-valuemin", "0");
+      var fill = document.createElement("div"); fill.className = "fill";
+      track.appendChild(fill);
+
+      lane.appendChild(head); lane.appendChild(stats); lane.appendChild(track);
+      box.appendChild(lane);
+      return { lane: l, count: count, done: done, fill: fill, track: track };
+    });
+    drawLanes(raceState === "done" ? Infinity : simNow);
+  }
+
+  function workloadN() { return WORKLOADS[model.family][workloadIdx]; }
+  function finishTime(l) { return workloadN() / l.thr; }
+  function processed(l, t) {
+    var n = workloadN(), b = BATCH[model.family];
+    if (t >= finishTime(l)) return n;
+    return Math.min(n, Math.floor((t * l.thr) / b) * b);
+  }
+  function drawLanes(t) {
+    var n = workloadN();
+    laneEls.forEach(function (e) {
+      var k = processed(e.lane, t);
+      e.fill.style.width = (100 * k / n) + "%";
+      e.count.textContent = fmtInt(k) + " / " + fmtInt(n);
+      e.track.setAttribute("aria-valuemax", String(n));
+      e.track.setAttribute("aria-valuenow", String(k));
+      var finished = t >= finishTime(e.lane);
+      e.done.hidden = !finished;
+      if (finished) e.done.textContent = "✓ " + T().dur(finishTime(e.lane));
+    });
+    $("clock").textContent = clockText(Math.min(t, slowest()));
+  }
+  function slowest() { return Math.max.apply(null, model.lanes.map(finishTime)); }
+  function playbackFactor() { return Math.max(1, slowest() / TARGET_SECONDS); }
+  function showPlayback() {
+    var f = playbackFactor();
+    $("playback").textContent = f <= 1.0001 ? T().realtime : T().fastfwd(f);
+  }
+
+  // ---------------------------------------------------------------- race loop
+  function resetRace() {
+    cancelAnimationFrame(raf);
+    raceState = "idle";
+    simNow = 0;
+    drawLanes(0);
+    showPlayback();
+    showPending();
+    $("startBtn").textContent = T().start;
+  }
+  function startRace() {
+    cancelAnimationFrame(raf);
+    showPlayback();
+    if (reduceMotion) { finishRace(); return; }
+    raceState = "running";
+    simNow = 0;
+    $("result").classList.add("pending");
+    $("resultLine1").textContent = T().running;
+    $("resultLine2").textContent = "";
+    $("startBtn").textContent = T().replay;
+    raceStart = performance.now();
+    var f = playbackFactor(), end = slowest();
+    function tick(now) {
+      simNow = ((now - raceStart) / 1000) * f;
+      if (simNow >= end) { finishRace(); return; }
+      drawLanes(simNow);
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  function finishRace() {
+    cancelAnimationFrame(raf);
+    raceState = "done";
+    simNow = slowest();
+    drawLanes(Infinity);
+    $("startBtn").textContent = T().replay;
+    showResult();
+  }
+  $("startBtn").addEventListener("click", startRace);
+  $("skipBtn").addEventListener("click", function () { showPlayback(); finishRace(); });
+
+  function baseLane() { return model.lanes[0]; }
+  function flashLane() { return model.lanes[model.lanes.length - 1]; }
+  function showPending() {
+    $("result").classList.add("pending");
+    $("heroFigure").textContent = model.speedup.toFixed(1) + "×";
+    $("heroLabel").textContent = T().heroLabel(baseLane().label);
+    $("resultLine1").textContent = T().pending;
+    $("resultLine2").textContent = "";
+  }
+  function showResult() {
+    var base = baseLane(), flash = flashLane();
+    var tf = finishTime(flash), tb = finishTime(base);
+    var pct = Math.round(100 * processed(base, tf) / workloadN());
+    $("result").classList.remove("pending");
+    $("heroFigure").textContent = model.speedup.toFixed(1) + "×";
+    $("heroLabel").textContent = T().heroLabel(base.label);
+    $("resultLine1").textContent = T().line1(flash.label, fmtInt(workloadN()), T().unit(model.family), T().dur(tf), T().dur(tb - tf), base.label);
+    $("resultLine2").textContent = T().line2(base.label, pct);
+  }
+
+  // ---------------------------------------------------------------- at-a-glance chart (SVG)
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs, parent) {
+    var el = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function renderGlance() {
+    var box = $("glance");
+    var width = Math.max(300, box.clientWidth || 600);
+    // Narrow screens put the label on its own line above each bar.
+    var narrow = width < 560;
+    var labelW = narrow ? 0 : 190, rightPad = 44, barH = 14, groupH = 30, axisH = 30;
+    var rowH = narrow ? 44 : 30;
+    var plotW = width - labelW - rightPad;
+    var maxX = 2;
+    var x = function (v) { return labelW + (v / maxX) * plotW; };
+    var groups = [[3, T().groupT3], [4, T().groupT4]];
+    var height = groups.length * groupH + MODELS.length * rowH + axisH + 8;
+
+    box.textContent = "";
+    var svg = svgEl("svg", { viewBox: "0 0 " + width + " " + height, role: "group", "aria-label": T().glanceTitle }, box);
+    var ink2 = cssVar("--ink-2"), muted = cssVar("--muted"), grid = cssVar("--grid"), axis = cssVar("--axis"), accent = cssVar("--accent"), ink = cssVar("--ink");
+    var fontSize = narrow ? 12.5 : 13;
+    var plotBottom = height - axisH;
+    var gridLayer = svgEl("g", {}, svg);
+    var refLayer = svgEl("g", { "pointer-events": "none" }, svg);
+
+    // x-axis ticks; the 1x tick doubles as the baseline label
+    var ticks = narrow ? [0, 1, 2] : [0, 0.5, 1, 1.5, 2];
+    ticks.forEach(function (tv) {
+      var tl = svgEl("text", { x: x(tv), y: plotBottom + 18, "text-anchor": tv === 0 ? "start" : "middle", fill: tv === 1 ? ink2 : muted, "font-size": 12, "font-weight": tv === 1 ? 600 : 400, "font-variant-numeric": "tabular-nums" }, svg);
+      tl.textContent = tv === 1 ? T().axisBaseline : (tv === 0 ? "0" : tv) + "×";
+    });
+
+    var y = 0;
+    groups.forEach(function (g) {
+      var gt = svgEl("text", { x: 0, y: y + 20, fill: ink2, "font-size": 12.5, "font-weight": 600 }, svg);
+      gt.textContent = g[1];
+      y += groupH;
+      var groupTop = y, spans = [];
+      MODELS.filter(function (m) { return m.table === g[0]; }).forEach(function (m) {
+        var row = svgEl("g", { "class": "row-hit" + (m.id === model.id ? " selected" : ""), tabindex: 0, role: "button", "aria-label": T().rowAria(m) }, svg);
+        svgEl("rect", { "class": "row-band", x: -6, y: y, width: width + 6, height: rowH, rx: 6, fill: "transparent" }, row);
+        var labelY = narrow ? y + 15 : y + rowH / 2 + 4.5;
+        var lab = svgEl("text", { x: 0, y: labelY, fill: ink, "font-size": fontSize, "font-weight": m.id === model.id ? 700 : 500 }, row);
+        lab.textContent = m.name;
+        var prec = svgEl("tspan", { fill: muted, "font-weight": 400, dx: 6 }, lab);
+        prec.textContent = m.prec;
+        // bar: square at the baseline, 4px rounded data end
+        var by = narrow ? y + 22 : y + (rowH - barH) / 2;
+        var x0 = x(0), x1 = x(m.speedup), r = 4;
+        var d = "M" + x0 + "," + by + "H" + (x1 - r) + "a" + r + "," + r + " 0 0 1 " + r + "," + r +
+          "V" + (by + barH - r) + "a" + r + "," + r + " 0 0 1 " + (-r) + "," + r + "H" + x0 + "Z";
+        svgEl("path", { d: d, fill: accent }, row);
+        spans.push([by - 4, by + barH + 4]);
+        var val = svgEl("text", { x: x1 + 6, y: by + barH / 2 + 4.5, fill: ink, "font-size": fontSize, "font-weight": 650, "font-variant-numeric": "tabular-nums" }, row);
+        val.textContent = m.speedup.toFixed(1) + "×";
+        row.addEventListener("click", function () { selectModel(m.id, true); scrollToRace(); });
+        row.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectModel(m.id, true); scrollToRace(); }
+        });
+        row.addEventListener("pointermove", function (e) { showTip(m, e.clientX, e.clientY); });
+        row.addEventListener("pointerleave", hideTip);
+        row.addEventListener("focus", function () {
+          var b = row.getBoundingClientRect();
+          showTip(m, b.left + Math.min(b.width * 0.6, 420), b.top + b.height / 2);
+        });
+        row.addEventListener("blur", hideTip);
+        y += rowH;
+      });
+      // Gridlines and the 1x reference never cross group titles; on narrow screens they
+      // are cut to each bar's band so they stay clear of the labels above the bars.
+      if (!narrow) spans = [[groupTop, y]];
+      spans.forEach(function (sp) {
+        ticks.forEach(function (tv) {
+          if (tv === 1) return;
+          svgEl("line", { x1: x(tv), x2: x(tv), y1: sp[0], y2: sp[1], stroke: tv === 0 ? axis : grid, "stroke-width": 1, "shape-rendering": "crispEdges" }, gridLayer);
+        });
+        svgEl("line", { x1: x(1), x2: x(1), y1: sp[0], y2: sp[1], stroke: ink2, "stroke-width": 1, "shape-rendering": "crispEdges" }, refLayer);
+      });
+    });
+    svg.appendChild(refLayer);
+  }
+
+  function scrollToRace() {
+    var card = $("raceCard");
+    var r = card.getBoundingClientRect();
+    if (r.top < 0 || r.top > window.innerHeight * 0.5) {
+      card.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    }
+  }
+
+  // ---------------------------------------------------------------- tooltip
+  function showTip(m, cx, cy) {
+    var tip = $("tip");
+    tip.textContent = "";
+    var title = document.createElement("div"); title.className = "tip-title";
+    title.textContent = m.name + " · " + m.prec + " · " + T().setting(m.family);
+    tip.appendChild(title);
+    m.lanes.slice().reverse().forEach(function (l) {
+      var row = document.createElement("div"); row.className = "tip-row";
+      var key = document.createElement("span"); key.className = "tip-key" + (l.kind === "flash" ? " flash" : "");
+      var val = document.createElement("span"); val.className = "tip-val";
+      val.textContent = fmtInt(l.thr) + " " + T().perSec(m.family === "sr" ? "patch" : "img");
+      var name = document.createElement("span"); name.className = "tip-name"; name.textContent = l.label;
+      row.appendChild(key); row.appendChild(val); row.appendChild(name);
+      tip.appendChild(row);
+    });
+    var foot = document.createElement("div"); foot.className = "tip-foot";
+    foot.textContent = "▲ " + m.speedup.toFixed(1) + "× " + T().speedupWord;
+    tip.appendChild(foot);
+    tip.hidden = false;
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = cx + 14, top = cy + 14;
+    if (left + w > window.innerWidth - 8) left = cx - w - 14;
+    if (top + h > window.innerHeight - 8) top = cy - h - 14;
+    tip.style.left = Math.max(8, left) + "px";
+    tip.style.top = Math.max(8, top) + "px";
+  }
+  function hideTip() { $("tip").hidden = true; }
+
+  // ---------------------------------------------------------------- table view
+  function buildTable() {
+    var t = $("dataTable");
+    t.textContent = "";
+    var thead = document.createElement("thead"), tr = document.createElement("tr");
+    T().thead.forEach(function (h, i) {
+      var th = document.createElement("th"); th.textContent = h;
+      if (i === 7) th.className = "setting";
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr); t.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    MODELS.forEach(function (m) {
+      var byKind = {};
+      m.lanes.forEach(function (l) { byKind[l.kind] = l; });
+      var cells = [
+        String(m.table), m.name, m.prec,
+        byKind.std ? fmtInt(byKind.std.thr) : "–",
+        fmtInt(byKind.naive.thr),
+        fmtInt(byKind.flash.thr),
+        m.speedup.toFixed(1) + "×",
+        T().setting(m.family)
+      ];
+      var row = document.createElement("tr");
+      cells.forEach(function (c, i) {
+        var td = document.createElement("td"); td.textContent = c;
+        if (i === 5) td.className = "flash-col";
+        if (i === 7) td.className = "setting";
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+    t.appendChild(tbody);
+  }
+
+  // ---------------------------------------------------------------- boot
+  var resizeTimer = 0;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderGlance, 120);
+  });
+  if (params.get("model")) {
+    var pm = MODELS.filter(function (x) { return x.id === params.get("model"); })[0];
+    if (pm) model = pm;
+  }
+  applyLang();
+  resetRace();
+
+  // Start once the race is on screen.
+  if (!reduceMotion && "IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) { io.disconnect(); if (raceState === "idle") startRace(); }
+    }, { threshold: 0.5 });
+    io.observe($("raceCard"));
+  }
+})();
+</script>
+</body>
+</html>
