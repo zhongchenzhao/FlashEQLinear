@@ -1,0 +1,39 @@
+# Python caches and local builds
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.dll
+*.o
+*.obj
+build/
+dist/
+*.egg-info/
+.ninja_*
+
+# Local environments and private configuration
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Experiment outputs
+*.log
+*.pth
+*.pt
+checkpoints/
+outputs/
+runs/
+wandb/
+
+# Local editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# README style reference
+/README2.md
