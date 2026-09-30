@@ -1,6 +1,10 @@
 # Flash EQ-Linear: Lossless Acceleration for Equivariant Linear Layers
 
-✨ Official implementation of **Flash EQ-Linear: Accelerating Equivariant Linear Layers via Group-wise Discrete Fourier Transform** ![Lossless](https://img.shields.io/badge/Acceleration-Lossless-brightgreen.svg)
+✨ Official implementation of **Flash EQ-Linear: Accelerating Equivariant Linear Layers via Group-wise Discrete Fourier Transform** 
+
+
+[![Demo](https://img.shields.io/badge/Demo-Try_it_live-2a78d6.svg)](https://zhongchenzhao.github.io/FlashEQLinear/) 
+![Lossless](https://img.shields.io/badge/Acceleration-Lossless-brightgreen.svg)
 
 
 
