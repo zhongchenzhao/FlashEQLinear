@@ -4,8 +4,13 @@
 
 **🤗 Don't hesitate to give us a ⭐️ if you are interested in this project!**
 
-[![Demo](https://img.shields.io/badge/Demo-Try_it_live-2a78d6.svg)](https://zhongchenzhao.github.io/FlashEQLinear/) [![arXiv](https://img.shields.io/badge/arXiv-2607.21271-b31b1b.svg)](https://arxiv.org/abs/2607.21271) ![Lossless](https://img.shields.io/badge/Acceleration-Lossless-brightgreen.svg)
+[![Demo](https://img.shields.io/badge/Demo-Try_it_live-2a78d6.svg)](https://zhongchenzhao.github.io/FlashEQLinear/) 
+[![arXiv](https://img.shields.io/badge/arXiv-2607.21271-b31b1b.svg)](https://arxiv.org/abs/2607.21271) 
+![Lossless](https://img.shields.io/badge/Acceleration-Lossless-brightgreen.svg)
 
+[![Standard, naive EQ and Flash EQ ViT-H racing on three RTX 4090s](demo/r1_terminal_race/r1_vit_h_fp32.gif)
+
+*Real run on three RTX 4090s: Flash EQ-ViT-H finishes 3,200 images 1.69× sooner than standard ViT-H. Click the recording to open the interactive demos.*
 
 
 ## 💡 Introduction
