@@ -1,14 +1,14 @@
 # Flash EQ-Linear: Lossless Acceleration for Equivariant Linear Layers
 
-✨ Official implementation of **Flash EQ-Linear: Accelerating Equivariant Linear Layers via Group-wise Discrete Fourier Transform** 
+✨ Official implementation of **Flash EQ-Linear: Accelerating Equivariant Linear Layers via Group-wise Discrete Fourier Transform**
+
+[![Demo](https://img.shields.io/badge/Demo-Interactive-2a78d6.svg)](demo/) ![Lossless](https://img.shields.io/badge/Acceleration-Lossless-brightgreen.svg)
+
+[![Standard, naive EQ and Flash EQ ViT-H racing on three RTX 4090s](demo/r1_terminal_race/r1_vit_h_fp32.gif)](demo/)
+
+*Real run on three RTX 4090s: Flash EQ-ViT-H finishes 3,200 images 1.69× sooner than standard ViT-H. Click the recording to open the demo folder.*
 
 
-[![Demo](https://img.shields.io/badge/Demo-Try_it_live-2a78d6.svg)](https://zhongchenzhao.github.io/FlashEQLinear/) 
-![Lossless](https://img.shields.io/badge/Acceleration-Lossless-brightgreen.svg)
-
-[![Standard, naive EQ and Flash EQ ViT-H racing on three RTX 4090s](demo/r1_terminal_race/r1_vit_h_fp32.gif)](https://zhongchenzhao.github.io/FlashEQLinear/)
-
-*Real run on three RTX 4090s: Flash EQ-ViT-H finishes 3,200 images 1.69× sooner than standard ViT-H. Click the recording to open the interactive demos.*
 
 ## 💡 Introduction
 
@@ -52,9 +52,7 @@ The [`demo/`](demo/README.md) folder holds two interactive pages (open `demo/ind
 - **Throughput race** (`demo/s1_throughput_race.html`): standard, naive and Flash networks race through the same workload at the throughput measured in the paper.
 - **How it works** (`demo/s2_principle.html`): five animated steps from the circulant matrix to one product per frequency, with an adjustable group size T.
 
-**Live race on three RTX 4090s.** Standard ViT-H, naive EQ-ViT-H and Flash EQ-ViT-H (FP32, batch 128) push the same 3,200 images. Flash finishes **1.69×** sooner than ViT-H; naive EQ-ViT-H keeps pace with ViT-H using 4× fewer parameters.
-
-![Standard, naive EQ and Flash EQ ViT-H racing on three RTX 4090s](demo/r1_terminal_race/r1_vit_h_fp32.gif)
+**Live race on three RTX 4090s.** Standard ViT-H, naive EQ-ViT-H and Flash EQ-ViT-H (FP32, batch 128) push the same 3,200 images. Flash finishes **1.69×** sooner than ViT-H; naive EQ-ViT-H keeps pace with ViT-H using 4× fewer parameters (recording at the top of this page).
 
 **Super-resolution race.** SwinIR-LIIF, naive EQ-SwinIR-LIIF and Flash EQ-SwinIR-LIIF on 48 × 48 patches, 16 per batch: Flash is **1.25×** faster than the non-equivariant network. The picture shows the reference image; the timings are measured.
 
